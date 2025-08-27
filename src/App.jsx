@@ -175,6 +175,8 @@ return (
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="text-xl font-semibold tracking-tight text-[#057e7f]">TealSkills</div>
+          <span className="ml-2 text-xs text-slate-500">v-navbar-test</span>
+
           {/* Petit badge si admin */}
           {isAdmin && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-[#057e7f]/10 text-[#057e7f] border border-[#057e7f]/30">
