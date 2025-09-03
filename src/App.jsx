@@ -1337,8 +1337,6 @@ function AdminOKR_Employee() {
   const [versions, setVersions] = useState([]);
   const [versionId, setVersionId] = useState("");
 
-  const [category, setCategory] = useState("Client");
-
   const [items, setItems] = useState([]);
   const [answersMap, setAnswersMap] = useState({});
 
@@ -1381,7 +1379,7 @@ function AdminOKR_Employee() {
     })();
   }, [employeeId]);
 
-  // Charger les OKRs + réponses pour l’employé/version/catégorie
+  // Charger TOUS les OKRs + réponses pour l’employé/version (plus de filtre par catégorie)
   useEffect(() => {
     if (!employeeId || !versionId) {
       setItems([]);
@@ -1395,7 +1393,7 @@ function AdminOKR_Employee() {
           .select("id, title, description, category, order_index")
           .eq("version_id", versionId)
           .eq("assigned_user_id", employeeId)
-          .eq("category", category)
+          .order("category", { ascending: true })
           .order("order_index", { ascending: true });
         if (e1) throw e1;
 
@@ -1418,7 +1416,7 @@ function AdminOKR_Employee() {
         alert(`Load data failed: ${e.message}`);
       }
     })();
-  }, [employeeId, versionId, category]);
+  }, [employeeId, versionId]);
 
   const badge = (status) => {
     if (!status) return <span className="inline-block px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">—</span>;
@@ -1431,7 +1429,15 @@ function AdminOKR_Employee() {
       status === "orange" ? "In progress" :
       status === "red" ? "Not completed" : status;
     return <span className={`inline-block px-2 py-0.5 rounded-full text-white ${color}`}>{label}</span>;
-    };
+  };
+
+  // Regrouper côté JS pour l’affichage (ordre fixe des catégories)
+  const categories = ["Client", "Myself", "Company"];
+  const grouped = categories.map(cat => ({
+    cat,
+    rows: (items || []).filter(it => it.category === cat)
+  }));
+  const allEmpty = grouped.every(g => g.rows.length === 0);
 
   return (
     <div className="grid gap-4">
@@ -1466,8 +1472,6 @@ function AdminOKR_Employee() {
             ))}
           </select>
         </label>
-
-
       </div>
 
       {/* Visualisation */}
@@ -1482,30 +1486,46 @@ function AdminOKR_Employee() {
             </tr>
           </thead>
           <tbody>
-            {items.map((it) => {
-              const ans = answersMap[it.id] || {};
-              return (
-                <tr key={it.id} className="border-t align-top">
-                  <td className="p-2">{it.category}</td>
-                  <td className="p-2 whitespace-pre-wrap text-slate-800">{it.description}</td>
-                  <td className="p-2">{badge(ans.status)}</td>
-                  <td className="p-2 whitespace-pre-wrap text-slate-700">{ans.notes || "—"}</td>
-                </tr>
-              );
-            })}
-            {items.length === 0 && (
+            {allEmpty && (
               <tr>
                 <td className="p-2 text-slate-500" colSpan={4}>
                   No OKRs for this selection.
                 </td>
               </tr>
             )}
+
+            {!allEmpty && grouped.map(section => (
+              <React.Fragment key={section.cat}>
+                {/* séparateur de section si la catégorie a des lignes */}
+                {section.rows.length > 0 && (
+                  <tr className="bg-slate-50/70">
+                    <td className="p-2 font-semibold text-slate-700" colSpan={4}>
+                      {section.cat}
+                    </td>
+                  </tr>
+                )}
+                {section.rows.map((it) => {
+                  const ans = answersMap[it.id] || {};
+                  return (
+                    <tr key={it.id} className="border-t align-top">
+                      <td className="p-2">{it.category}</td>
+                      <td className="p-2 whitespace-pre-wrap text-slate-800">
+                        {it.description || it.title}
+                      </td>
+                      <td className="p-2">{badge(ans.status)}</td>
+                      <td className="p-2 whitespace-pre-wrap text-slate-700">{ans.notes || "—"}</td>
+                    </tr>
+                  );
+                })}
+              </React.Fragment>
+            ))}
           </tbody>
         </table>
       </div>
     </div>
   );
 }
+
 
 function AdminOKR_Visualization() {
   const [users, setUsers] = useState([]);
