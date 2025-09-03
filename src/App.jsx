@@ -163,71 +163,77 @@ function Shell({ children }) {
     fetchRole();
   }, [session]);
 
-  // 👉 Classe NavLink inline (pas de dépendance à navClass externe)
+  // Classe locale pour les liens
   const navLinkClass = ({ isActive }) =>
-    "px-3 py-1.5 rounded-lg transition " +
+    "px-3 py-1.5 rounded-lg text-sm transition " +
     (isActive ? "bg-[#057e7f] text-white" : "text-slate-800 hover:bg-slate-100");
-
-  // Barre debug (temporaire)
-  const DebugBar = () => (
-    <div className="text-[10px] px-2 py-1 bg-amber-50 border-b border-amber-200 text-amber-800">
-      layout:Shell • path: {location.pathname} • session: {session ? "yes" : "no"} • admin: {isAdmin ? "yes" : "no"}
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <DebugBar />
+      {/* NAVBAR FIXE – hauteur 64px */}
+      <div
+        id="app-navbar"
+        className="fixed top-0 left-0 right-0 z-[9999] border-b border-slate-200 bg-white"
+        style={{
+          height: "64px",                        // h-16
+          paddingTop: "env(safe-area-inset-top)" // iOS notch
+        }}
+      >
+        <div className="max-w-6xl mx-auto h-full">
+          <div className="px-4 h-full flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="text-xl font-semibold tracking-tight text-[#057e7f]">
+                TealSkills
+              </div>
+              {/* Badge admin discret */}
+              {isAdmin && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#057e7f]/10 text-[#057e7f] border border-[#057e7f]/30">
+                  Admin
+                </span>
+              )}
+            </div>
 
-      {/* Navbar solide & visible (aucun blur, z-index élevé) */}
-<div
-  id="app-navbar"
-  className="fixed top-0 left-0 right-0 z-[99999] border-b border-slate-200 bg-white shadow-sm"
-  style={{ display: "block", visibility: "visible", opacity: 1 }}
->
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="text-xl font-semibold tracking-tight text-[#057e7f]">TealSkills</div>
-            <span className="ml-2 text-xs text-slate-500">v-navbar-test</span>
-            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">
-              NAVBAR DEBUG
-            </span>
-            {isAdmin && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[#057e7f]/10 text-[#057e7f] border border-[#057e7f]/30">
-                Admin
-              </span>
-            )}
+            {/* Liens : pas de wrap + scroll horizontal si besoin */}
+            <nav className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+              <NavLink className={navLinkClass} to="/">Home</NavLink>
+              <NavLink className={navLinkClass} to="/okr">OKR</NavLink>
+              <NavLink className={navLinkClass} to="/role">Role</NavLink>
+              <NavLink className={navLinkClass} to="/global">Global</NavLink>
+              {isAdmin && <NavLink className={navLinkClass} to="/admin">Admin</NavLink>}
+
+              {session ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate("/login", { replace: true });
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-700 hover:bg-slate-50 shrink-0"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  Logout
+                </button>
+              ) : (
+                <NavLink className={navLinkClass} to="/login">Se connecter</NavLink>
+              )}
+            </nav>
           </div>
-
-          <nav className="flex items-center gap-2">
-            <NavLink className={navLinkClass} to="/">Home</NavLink>
-            <NavLink className={navLinkClass} to="/okr">OKR</NavLink>
-            <NavLink className={navLinkClass} to="/role">Role</NavLink>
-            <NavLink className={navLinkClass} to="/global">Global</NavLink>
-            {isAdmin && <NavLink className={navLinkClass} to="/admin">Admin</NavLink>}
-
-            {session ? (
-              <button
-                type="button"
-                onClick={async () => { await supabase.auth.signOut(); navigate("/login", { replace: true }); }}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-              >
-                Logout
-              </button>
-            ) : (
-              <NavLink className={navLinkClass} to="/login">Se connecter</NavLink>
-            )}
-          </nav>
         </div>
       </div>
 
-<main className="max-w-6xl mx-auto px-4 pt-24 pb-8">
-  {typeof children !== "undefined" ? children : <Outlet />}
-</main>
-
+      {/* CONTENU – padding-top = hauteur navbar (+ notch) */}
+      <main
+        className="max-w-6xl mx-auto px-4 pb-10"
+        style={{
+          paddingTop: "calc(64px + env(safe-area-inset-top))" // = h-16 + notch
+        }}
+      >
+        {typeof children !== "undefined" ? children : <Outlet />}
+      </main>
 
       <footer className="max-w-6xl mx-auto px-4 pb-10 text-xs text-slate-500">
-        Données stockées dans <strong>Postgres Supabase</strong> (RLS activé). Certaines valeurs UI sont en cache local.
+        Données stockées dans <strong>Postgres Supabase</strong> (RLS activé).
       </footer>
 
       {toast && (
@@ -238,6 +244,7 @@ function Shell({ children }) {
     </div>
   );
 }
+
 
 
 
