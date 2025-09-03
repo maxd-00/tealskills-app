@@ -4,23 +4,42 @@ import App from './App.jsx'
 import './index.css'
 import * as Sentry from '@sentry/react'
 
-// Initialisation Sentry
-Sentry.init({
-  dsn: import.meta.env.VITE_SENTRY_DSN, // récupère ta DSN depuis Vercel (.env)
-  integrations: [new Sentry.BrowserTracing(), new Sentry.Replay()],
-  tracesSampleRate: 0.1,            // 10% des transactions
-  replaysSessionSampleRate: 0.1,    // 10% des sessions
-  replaysOnErrorSampleRate: 1.0,    // 100% si erreur
-  sendDefaultPii: true,             // capture infos basiques (IP, user agent)
-  environment: import.meta.env.MODE // 'production' sur Vercel
-})
+const DSN = import.meta.env.VITE_SENTRY_DSN
+
+// ⚠️ Ne jamais bloquer le rendu si Sentry pose problème
+try {
+  if (DSN) {
+    Sentry.init({
+      dsn: DSN,
+      integrations: [new Sentry.BrowserTracing(), new Sentry.Replay()],
+      tracesSampleRate: 0.1,
+      replaysSessionSampleRate: 0.1,
+      replaysOnErrorSampleRate: 1.0,
+      sendDefaultPii: true,
+      environment: import.meta.env.MODE,
+    })
+  }
+} catch (e) {
+  // On loggue et on laisse l'app démarrer
+  console.error('Sentry init failed (ignored):', e)
+}
 
 const container = document.getElementById('root')
 const root = createRoot(container)
 
+// Un garde-fou de plus : si Sentry est importé, on peut ajouter un ErrorBoundary
+const AppWithBoundary = DSN
+  ? (
+      <Sentry.ErrorBoundary fallback={<div style={{padding:16}}>Une erreur est survenue. Réessayez.</div>}>
+        <App />
+      </Sentry.ErrorBoundary>
+    )
+  : <App />
+
 root.render(
   <React.StrictMode>
-    <App />
+    {AppWithBoundary}
   </React.StrictMode>
 )
+
 
