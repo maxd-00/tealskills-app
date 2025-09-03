@@ -180,7 +180,11 @@ function Shell({ children }) {
       <DebugBar />
 
       {/* Navbar solide & visible (aucun blur, z-index élevé) */}
-      <div id="app-navbar" className="sticky top-0 z-[100] border-b border-slate-200 bg-white">
+<div
+  id="app-navbar"
+  className="fixed top-0 left-0 right-0 z-[99999] border-b border-slate-200 bg-white shadow-sm"
+  style={{ display: "block", visibility: "visible", opacity: 1 }}
+>
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="text-xl font-semibold tracking-tight text-[#057e7f]">TealSkills</div>
@@ -217,10 +221,10 @@ function Shell({ children }) {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Rend l’enfant si présent, sinon l’Outlet (routes imbriquées) */}
-        {typeof children !== "undefined" ? children : <Outlet />}
-      </main>
+<main className="max-w-6xl mx-auto px-4 pt-24 pb-8">
+  {typeof children !== "undefined" ? children : <Outlet />}
+</main>
+
 
       <footer className="max-w-6xl mx-auto px-4 pb-10 text-xs text-slate-500">
         Données stockées dans <strong>Postgres Supabase</strong> (RLS activé). Certaines valeurs UI sont en cache local.
