@@ -144,29 +144,31 @@ function Shell({ children }) {
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast } = useToast?.() || { toast: null };
 
   useEffect(() => {
     const fetchRole = async () => {
-      if (session?.user) {
+      try {
+        if (!session?.user) return setIsAdmin(false);
         const { data, error } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", session.user.id)
           .single();
         setIsAdmin(!error && data?.role === "admin");
-      } else {
+      } catch {
         setIsAdmin(false);
       }
     };
     fetchRole();
   }, [session]);
 
-  const navClass = ({ isActive }) =>
+  // 👉 Classe NavLink inline (pas de dépendance à navClass externe)
+  const navLinkClass = ({ isActive }) =>
     "px-3 py-1.5 rounded-lg transition " +
-    (isActive ? "bg-[#057e7f] text-white" : "text-slate-700 hover:bg-slate-100");
+    (isActive ? "bg-[#057e7f] text-white" : "text-slate-800 hover:bg-slate-100");
 
-  // Barre debug (garde-la le temps du test)
+  // Barre debug (temporaire)
   const DebugBar = () => (
     <div className="text-[10px] px-2 py-1 bg-amber-50 border-b border-amber-200 text-amber-800">
       layout:Shell • path: {location.pathname} • session: {session ? "yes" : "no"} • admin: {isAdmin ? "yes" : "no"}
@@ -177,17 +179,11 @@ function Shell({ children }) {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <DebugBar />
 
-      {/* Remplacement du <header> par un div forcé visible */}
-      <div
-        id="app-navbar"
-        className="sticky top-0 z-50 bg-white border-b border-slate-200"
-        style={{ WebkitBackdropFilter: "none", backdropFilter: "none" }}
-      >
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between min-h-[56px]">
+      {/* Navbar solide & visible (aucun blur, z-index élevé) */}
+      <div id="app-navbar" className="sticky top-0 z-[100] border-b border-slate-200 bg-white">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="text-xl font-semibold tracking-tight text-[#057e7f]">
-              TealSkills
-            </div>
+            <div className="text-xl font-semibold tracking-tight text-[#057e7f]">TealSkills</div>
             <span className="ml-2 text-xs text-slate-500">v-navbar-test</span>
             <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">
               NAVBAR DEBUG
@@ -200,33 +196,29 @@ function Shell({ children }) {
           </div>
 
           <nav className="flex items-center gap-2">
-            <NavLink className={navClass} to="/">Home</NavLink>
-            <NavLink className={navClass} to="/okr">OKR</NavLink>
-            <NavLink className={navClass} to="/role">Role</NavLink>
-            <NavLink className={navClass} to="/global">Global</NavLink>
-            {isAdmin && <NavLink className={navClass} to="/admin">Admin</NavLink>}
+            <NavLink className={navLinkClass} to="/">Home</NavLink>
+            <NavLink className={navLinkClass} to="/okr">OKR</NavLink>
+            <NavLink className={navLinkClass} to="/role">Role</NavLink>
+            <NavLink className={navLinkClass} to="/global">Global</NavLink>
+            {isAdmin && <NavLink className={navLinkClass} to="/admin">Admin</NavLink>}
 
             {session ? (
               <button
                 type="button"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate("/login", { replace: true });
-                }}
+                onClick={async () => { await supabase.auth.signOut(); navigate("/login", { replace: true }); }}
                 className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-                aria-label="Sign out"
-                title="Sign out"
               >
                 Logout
               </button>
             ) : (
-              <NavLink className={navClass} to="/login">Se connecter</NavLink>
+              <NavLink className={navLinkClass} to="/login">Se connecter</NavLink>
             )}
           </nav>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Rend l’enfant si présent, sinon l’Outlet (routes imbriquées) */}
         {typeof children !== "undefined" ? children : <Outlet />}
       </main>
 
@@ -235,13 +227,14 @@ function Shell({ children }) {
       </footer>
 
       {toast && (
-        <div className="fixed bottom-4 right-4 z-50 bg-[#057e7f] text-white px-3 py-2 rounded-xl shadow">
+        <div className="fixed bottom-4 right-4 z-[120] bg-[#057e7f] text-white px-3 py-2 rounded-xl shadow">
           {toast}
         </div>
       )}
     </div>
   );
 }
+
 
 
 
