@@ -2,21 +2,16 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
-
-// Sentry v8
 import * as Sentry from '@sentry/react'
-import { BrowserTracing } from '@sentry/react'
 
 const DSN = import.meta.env.VITE_SENTRY_DSN
 
+// ⚠️ Ne jamais bloquer le rendu si Sentry pose problème
 try {
   if (DSN) {
     Sentry.init({
       dsn: DSN,
-      integrations: [
-        new BrowserTracing(),         // v8: class importée séparément
-        Sentry.replayIntegration(),   // v8: fonction, pas "new Replay()"
-      ],
+      integrations: [new Sentry.BrowserTracing(), new Sentry.Replay()],
       tracesSampleRate: 0.1,
       replaysSessionSampleRate: 0.1,
       replaysOnErrorSampleRate: 1.0,
@@ -25,17 +20,17 @@ try {
     })
   }
 } catch (e) {
+  // On loggue et on laisse l'app démarrer
   console.error('Sentry init failed (ignored):', e)
 }
 
 const container = document.getElementById('root')
 const root = createRoot(container)
 
+// Un garde-fou de plus : si Sentry est importé, on peut ajouter un ErrorBoundary
 const AppWithBoundary = DSN
   ? (
-      <Sentry.ErrorBoundary fallback={<div style={{padding:16}}>
-        Une erreur est survenue. Réessayez.
-      </div>}>
+      <Sentry.ErrorBoundary fallback={<div style={{padding:16}}>Une erreur est survenue. Réessayez.</div>}>
         <App />
       </Sentry.ErrorBoundary>
     )
@@ -46,6 +41,5 @@ root.render(
     {AppWithBoundary}
   </React.StrictMode>
 )
-
 
 
