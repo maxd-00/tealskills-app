@@ -20,19 +20,7 @@ import {
 import { useParams } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
-// --- SENTRY TEST BUTTON (temporaire) ---
-function ErrorButton() {
-  return (
-    <button
-      onClick={() => { throw new Error('This is your first error!'); }}
-      className="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50"
-      title="Trigger a Sentry test error"
-    >
-      Break the world
-    </button>
-  );
-}
-// --- /SENTRY TEST BUTTON ---
+
 
 
 
@@ -213,7 +201,7 @@ function Shell({ children }) {
               <NavLink className={navLinkClass} to="/role">Role</NavLink>
               <NavLink className={navLinkClass} to="/global">Global</NavLink>
               {isAdmin && <NavLink className={navLinkClass} to="/admin">Admin</NavLink>}
-  {isAdmin && <ErrorButton />}
+
 
               {session ? (
                 <button
