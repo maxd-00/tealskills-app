@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState, useContext, createContext } from "react";
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
-import { useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate, useLocation, Outlet } from "react-router-dom";
 import {
   PieChart,
   Pie,
@@ -144,7 +143,7 @@ function Shell({ children }) {
   const { session } = useAuth();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const { toast, setToast } = useToast(); // (Point 2) lecture du toast
 
   useEffect(() => {
@@ -169,67 +168,74 @@ function Shell({ children }) {
     fetchRole();
   }, [session]);
 
-return (
-  <div className="min-h-screen bg-slate-50 text-slate-900">
-    <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="text-xl font-semibold tracking-tight text-[#057e7f]">TealSkills</div>
-          <span className="ml-2 text-xs text-slate-500">v-navbar-test</span>
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="text-xl font-semibold tracking-tight text-[#057e7f]">TealSkills</div>
+            <span className="ml-2 text-xs text-slate-500">v-navbar-test</span>
 
-          {/* Petit badge si admin */}
-          {isAdmin && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#057e7f]/10 text-[#057e7f] border border-[#057e7f]/30">
-              Admin
-            </span>
-          )}
+            {/* Petit badge si admin */}
+            {isAdmin && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[#057e7f]/10 text-[#057e7f] border border-[#057e7f]/30">
+                Admin
+              </span>
+            )}
+          </div>
+
+          <nav className="flex items-center gap-2">
+            {/* Liens toujours visibles (les pages restent protégées par <ProtectedRoute/>) */}
+            <NavLink className={navClass} to="/">Home</NavLink>
+            <NavLink className={navClass} to="/okr">OKR</NavLink>
+            <NavLink className={navClass} to="/role">Role</NavLink>
+            <NavLink className={navClass} to="/global">Global</NavLink>
+            {isAdmin && <NavLink className={navClass} to="/admin">Admin</NavLink>}
+
+            {/* À droite : Login / Logout selon la session */}
+            {session ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate("/login", { replace: true });
+                }}
+                className="w-8 h-8 rounded-full bg-white shrink-0 hover:bg-slate-50"
+                aria-label="Sign out"
+                title="Sign out"
+                style={{
+                  backgroundImage:
+                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23057e7f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 16L21 12M21 12L17 8M21 12L7 12M13 16V17C13 18.6569 11.6569 20 10 20H6C4.34315 20 3 18.6569 3 17V7C3 5.34315 4.34315 4 6 4H10C11.6569 4 13 5.34315 13 7V8'/%3E%3C/svg%3E\")",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                  backgroundSize: "85% 85%",
+                }}
+              />
+            ) : (
+              <NavLink className={navClass} to="/login">Se connecter</NavLink>
+            )}
+          </nav>
         </div>
+      </header>
 
-        <nav className="flex items-center gap-2">
-          {/* 👉 Toujours visibles : les liens (les pages restent protégées par <ProtectedRoute/>) */}
-          <NavLink className={navClass} to="/">Home</NavLink>
-          <NavLink className={navClass} to="/okr">OKR</NavLink>
-          <NavLink className={navClass} to="/role">Role</NavLink>
-          <NavLink className={navClass} to="/global">Global</NavLink>
-          {isAdmin && <NavLink className={navClass} to="/admin">Admin</NavLink>}
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* 👉 Rend la page enfant si présente, sinon l'Outlet (routes imbriquées) */}
+        {children ?? <Outlet />}
+      </main>
 
-          {/* À droite : Login / Logout selon la session */}
-          {session ? (
-            <button
-              type="button"
-              onClick={async () => { await supabase.auth.signOut(); navigate("/login", { replace: true }); }}
-              className="w-8 h-8 rounded-full bg-white shrink-0 hover:bg-slate-50"
-              aria-label="Sign out"
-              title="Sign out"
-              style={{
-                backgroundImage:
-                  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23057e7f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 16L21 12M21 12L17 8M21 12L7 12M13 16V17C13 18.6569 11.6569 20 10 20H6C4.34315 20 3 18.6569 3 17V7C3 5.34315 4.34315 4 6 4H10C11.6569 4 13 5.34315 13 7V8'/%3E%3C/svg%3E\")",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center",
-                backgroundSize: "85% 85%",
-              }}
-            />
-          ) : (
-            <NavLink className={navClass} to="/login">Se connecter</NavLink>
-          )}
-        </nav>
-      </div>
-    </header>
+      <footer className="max-w-6xl mx-auto px-4 pb-10 text-xs text-slate-500">
+        Données stockées dans <strong>Postgres Supabase</strong> (RLS activé). Certaines valeurs UI sont en cache local.
+      </footer>
 
-    <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
-
-    <footer className="max-w-6xl mx-auto px-4 pb-10 text-xs text-slate-500">
-      Données stockées dans <strong>Postgres Supabase</strong> (RLS activé). Certaines valeurs UI sont en cache local.
-    </footer>
-
-    {toast && (
-      <div className="fixed bottom-4 right-4 z-50 bg-[#057e7f] text-white px-3 py-2 rounded-xl shadow">
-        {toast}
-      </div>
-    )}
-  </div>
-);
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 bg-[#057e7f] text-white px-3 py-2 rounded-xl shadow">
+          {toast}
+        </div>
+      )}
+    </div>
+  );
 }
+
 
 
 function navClass({ isActive }) {
