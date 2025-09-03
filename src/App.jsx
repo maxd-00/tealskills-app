@@ -140,85 +140,96 @@ const ROLES_CATEGORY_INDEX = Object.fromEntries(
  * ==============================
  */
 
-// AJOUTE ces imports si tu ne les as pas déjà en haut du fichier :
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+function Shell({ children }) {
+  const { session } = useAuth();
+  const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const navigate = useNavigate(); 
+  const { toast, setToast } = useToast(); // (Point 2) lecture du toast
 
-function Shell() {
-  // Ces hooks existent déjà dans ton fichier ; si ce n’est pas le cas, laisse session null / isAdmin false.
-  const { session } = useAuth?.() || { session: null };
-  const navigate = useNavigate();
-  const isAdmin = useIsAdmin?.() || false;  // si pas de hook, ça restera false
-  const { toast } = useToast?.() || { toast: null };
+  useEffect(() => {
+    const fetchRole = async () => {
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
 
-  const navClass = ({ isActive }) =>
-    "px-3 py-1.5 rounded-lg transition " +
-    (isActive ? "bg-[#057e7f] text-white" : "text-slate-700 hover:bg-slate-100");
+        if (!error && data?.role === "admin") {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="text-xl font-semibold tracking-tight text-[#057e7f]">TealSkills</div>
-            {/* Petit badge debug pour confirmer que le layout est monté */}
-            <span className="ml-2 text-xs text-slate-500">layout:Shell</span>
-            {isAdmin && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[#057e7f]/10 text-[#057e7f] border border-[#057e7f]/30">
-                Admin
-              </span>
-            )}
-          </div>
+    fetchRole();
+  }, [session]);
 
-          <nav className="flex items-center gap-2">
-            <NavLink className={navClass} to="/">Home</NavLink>
-            <NavLink className={navClass} to="/okr">OKR</NavLink>
-            <NavLink className={navClass} to="/role">Role</NavLink>
-            <NavLink className={navClass} to="/global">Global</NavLink>
-            {isAdmin && <NavLink className={navClass} to="/admin">Admin</NavLink>}
+return (
+  <div className="min-h-screen bg-slate-50 text-slate-900">
+    <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="text-xl font-semibold tracking-tight text-[#057e7f]">TealSkills</div>
+          <span className="ml-2 text-xs text-slate-500">v-navbar-test</span>
 
-            {session ? (
-              <button
-                type="button"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate("/login", { replace: true });
-                }}
-                className="w-8 h-8 rounded-full bg-white shrink-0 hover:bg-slate-50"
-                aria-label="Sign out"
-                title="Sign out"
-                style={{
-                  backgroundImage:
-                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23057e7f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 16L21 12M21 12L17 8M21 12L7 12M13 16V17C13 18.6569 11.6569 20 10 20H6C4.34315 20 3 18.6569 3 17V7C3 5.34315 4.34315 4 6 4H10C11.6569 4 13 5.34315 13 7V8'/%3E%3C/svg%3E\")",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center",
-                  backgroundSize: "85% 85%",
-                }}
-              />
-            ) : (
-              <NavLink className={navClass} to="/login">Se connecter</NavLink>
-            )}
-          </nav>
+          {/* Petit badge si admin */}
+          {isAdmin && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-[#057e7f]/10 text-[#057e7f] border border-[#057e7f]/30">
+              Admin
+            </span>
+          )}
         </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* 👉 REND LA PAGE ENFANT ICI */}
-        <Outlet />
-      </main>
+        <nav className="flex items-center gap-2">
+          {/* 👉 Toujours visibles : les liens (les pages restent protégées par <ProtectedRoute/>) */}
+          <NavLink className={navClass} to="/">Home</NavLink>
+          <NavLink className={navClass} to="/okr">OKR</NavLink>
+          <NavLink className={navClass} to="/role">Role</NavLink>
+          <NavLink className={navClass} to="/global">Global</NavLink>
+          {isAdmin && <NavLink className={navClass} to="/admin">Admin</NavLink>}
 
-      <footer className="max-w-6xl mx-auto px-4 pb-10 text-xs text-slate-500">
-        Données stockées dans <strong>Postgres Supabase</strong> (RLS activé).
-      </footer>
+          {/* À droite : Login / Logout selon la session */}
+          {session ? (
+            <button
+              type="button"
+              onClick={async () => { await supabase.auth.signOut(); navigate("/login", { replace: true }); }}
+              className="w-8 h-8 rounded-full bg-white shrink-0 hover:bg-slate-50"
+              aria-label="Sign out"
+              title="Sign out"
+              style={{
+                backgroundImage:
+                  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23057e7f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 16L21 12M21 12L17 8M21 12L7 12M13 16V17C13 18.6569 11.6569 20 10 20H6C4.34315 20 3 18.6569 3 17V7C3 5.34315 4.34315 4 6 4H10C11.6569 4 13 5.34315 13 7V8'/%3E%3C/svg%3E\")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+                backgroundSize: "85% 85%",
+              }}
+            />
+          ) : (
+            <NavLink className={navClass} to="/login">Se connecter</NavLink>
+          )}
+        </nav>
+      </div>
+    </header>
 
-      {toast && (
-        <div className="fixed bottom-4 right-4 z-50 bg-[#057e7f] text-white px-3 py-2 rounded-xl shadow">
-          {toast}
-        </div>
-      )}
-    </div>
-  );
+    <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
+
+    <footer className="max-w-6xl mx-auto px-4 pb-10 text-xs text-slate-500">
+      Données stockées dans <strong>Postgres Supabase</strong> (RLS activé). Certaines valeurs UI sont en cache local.
+    </footer>
+
+    {toast && (
+      <div className="fixed bottom-4 right-4 z-50 bg-[#057e7f] text-white px-3 py-2 rounded-xl shadow">
+        {toast}
+      </div>
+    )}
+  </div>
+);
 }
-
 
 
 function navClass({ isActive }) {
@@ -3275,23 +3286,16 @@ export default function App() {
       <AuthProvider>
         <ToastCtx.Provider value={{ toast, setToast }}>
           <Shell>
-<Routes>
-  {/* Page Login (publique). Si tu veux la navbar aussi sur /login, vois l’option plus bas. */}
-  <Route path="/login" element={<Login />} />
-
-  {/* Bloc protégé : on protège le layout Shell une seule fois */}
-  <Route element={<ProtectedRoute><Shell /></ProtectedRoute>}>
-    <Route index element={<Home />} />
-    <Route path="okr" element={<OKR />} />
-    <Route path="role" element={<RolePage />} />
-    <Route path="global" element={<Global />} />
-    <Route path="admin" element={<Admin />} />
-  </Route>
-
-  {/* 404 → Home */}
-  <Route path="*" element={<Navigate to="/" replace />} />
-</Routes>
-
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+              <Route path="/okr" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
+              <Route path="/okr/:category" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
+              <Route path="/global" element={<ProtectedRoute><Global /></ProtectedRoute>} />
+              <Route path="/role" element={<ProtectedRoute><RolePage /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
           </Shell>
         </ToastCtx.Provider>
       </AuthProvider>
