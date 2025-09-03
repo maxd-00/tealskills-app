@@ -143,8 +143,8 @@ function Shell({ children }) {
   const { session } = useAuth();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
-  const navigate = useNavigate();
-  const { toast, setToast } = useToast(); // (Point 2) lecture du toast
+  const navigate = useNavigate(); 
+  const { toast, setToast } = useToast();
 
   useEffect(() => {
     const fetchRole = async () => {
@@ -154,52 +154,46 @@ function Shell({ children }) {
           .select("role")
           .eq("id", session.user.id)
           .single();
-
-        if (!error && data?.role === "admin") {
-          setIsAdmin(true);
-        } else {
-          setIsAdmin(false);
-        }
+        setIsAdmin(!error && data?.role === "admin");
       } else {
         setIsAdmin(false);
       }
     };
-
     fetchRole();
   }, [session]);
 
+  // 👉 petit helper visuel de debug (enlève-le ensuite)
+  const DebugBar = () => (
+    <div className="text-[10px] px-2 py-1 bg-amber-50 border-b border-amber-200 text-amber-800">
+      layout:Shell • path: {location.pathname} • session: {session ? "yes" : "no"} • admin: {isAdmin ? "yes" : "no"}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
+      <DebugBar />
+
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="text-xl font-semibold tracking-tight text-[#057e7f]">TealSkills</div>
             <span className="ml-2 text-xs text-slate-500">v-navbar-test</span>
-
-            {/* Petit badge si admin */}
             {isAdmin && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[#057e7f]/10 text-[#057e7f] border border-[#057e7f]/30">
-                Admin
-              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[#057e7f]/10 text-[#057e7f] border border-[#057e7f]/30">Admin</span>
             )}
           </div>
 
           <nav className="flex items-center gap-2">
-            {/* Liens toujours visibles (les pages restent protégées par <ProtectedRoute/>) */}
             <NavLink className={navClass} to="/">Home</NavLink>
             <NavLink className={navClass} to="/okr">OKR</NavLink>
             <NavLink className={navClass} to="/role">Role</NavLink>
             <NavLink className={navClass} to="/global">Global</NavLink>
             {isAdmin && <NavLink className={navClass} to="/admin">Admin</NavLink>}
 
-            {/* À droite : Login / Logout selon la session */}
             {session ? (
               <button
                 type="button"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate("/login", { replace: true });
-                }}
+                onClick={async () => { await supabase.auth.signOut(); navigate("/login", { replace: true }); }}
                 className="w-8 h-8 rounded-full bg-white shrink-0 hover:bg-slate-50"
                 aria-label="Sign out"
                 title="Sign out"
@@ -219,8 +213,8 @@ function Shell({ children }) {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* 👉 Rend la page enfant si présente, sinon l'Outlet (routes imbriquées) */}
-        {children ?? <Outlet />}
+        {/* 👉 Rend l’enfant SI présent (cas <Shell>{page}</Shell>), sinon l’Outlet (cas layout parent) */}
+        {typeof children !== "undefined" ? children : <Outlet />}
       </main>
 
       <footer className="max-w-6xl mx-auto px-4 pb-10 text-xs text-slate-500">
@@ -235,6 +229,7 @@ function Shell({ children }) {
     </div>
   );
 }
+
 
 
 
