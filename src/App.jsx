@@ -141,6 +141,7 @@ const ROLES_CATEGORY_INDEX = Object.fromEntries(
  */
 
 // AJOUTE ces imports si tu ne les as pas déjà en haut du fichier :
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
 
 function Shell() {
   // Ces hooks existent déjà dans ton fichier ; si ce n’est pas le cas, laisse session null / isAdmin false.
