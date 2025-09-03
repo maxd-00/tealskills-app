@@ -3274,16 +3274,23 @@ export default function App() {
       <AuthProvider>
         <ToastCtx.Provider value={{ toast, setToast }}>
           <Shell>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/okr" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
-              <Route path="/okr/:category" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
-              <Route path="/global" element={<ProtectedRoute><Global /></ProtectedRoute>} />
-              <Route path="/role" element={<ProtectedRoute><RolePage /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+<Routes>
+  {/* Page Login (publique). Si tu veux la navbar aussi sur /login, vois l’option plus bas. */}
+  <Route path="/login" element={<Login />} />
+
+  {/* Bloc protégé : on protège le layout Shell une seule fois */}
+  <Route element={<ProtectedRoute><Shell /></ProtectedRoute>}>
+    <Route index element={<Home />} />
+    <Route path="okr" element={<OKR />} />
+    <Route path="role" element={<RolePage />} />
+    <Route path="global" element={<Global />} />
+    <Route path="admin" element={<Admin />} />
+  </Route>
+
+  {/* 404 → Home */}
+  <Route path="*" element={<Navigate to="/" replace />} />
+</Routes>
+
           </Shell>
         </ToastCtx.Provider>
       </AuthProvider>
