@@ -5,17 +5,18 @@ import './index.css'
 
 // Sentry v8
 import * as Sentry from '@sentry/react'
-import { BrowserTracing } from '@sentry/react'
+import { browserTracingIntegration, replayIntegration } from '@sentry/react'
 
 const DSN = import.meta.env.VITE_SENTRY_DSN
 
+// Ne bloque jamais le rendu si Sentry a un souci
 try {
   if (DSN) {
     Sentry.init({
       dsn: DSN,
       integrations: [
-        new BrowserTracing(),         // v8: class importée séparément
-        Sentry.replayIntegration(),   // v8: fonction, pas "new Replay()"
+        browserTracingIntegration(),  // v8 : fonction
+        replayIntegration(),          // v8 : fonction
       ],
       tracesSampleRate: 0.1,
       replaysSessionSampleRate: 0.1,
