@@ -166,9 +166,9 @@ function Shell({ children }) {
     navigate("/login", { replace: true });
   };
 
-  // Style des liens NAV (texte teal, actif en fond teal)
+  // Style des liens NAV (teal forcé, pas de soulignement)
   const navLinkClass = ({ isActive }) =>
-    `rounded-md transition-colors font-medium
+    `no-underline rounded-md transition-colors font-medium
      ${isActive
         ? "bg-[#057e7f] text-white"
         : "text-[#057e7f] hover:bg-[#057e7f]/10"}`;
@@ -191,15 +191,15 @@ function Shell({ children }) {
               className={`flex items-center ${
                 isAdmin
                   ? "gap-1.5 sm:gap-2 md:gap-2.5" // compact admin
-                  : "gap-2 sm:gap-2.5 md:gap-3"  // resserré user
+                  : "gap-2 sm:gap-2.5 md:gap-3"  // user normal
               }`}
             >
               <NavLink
                 to="/"
-                className={`font-bold text-[#057e7f] ${
+                className={`font-bold no-underline ${
                   isAdmin
-                    ? "text-sm sm:text-lg md:text-xl"
-                    : "text-base sm:text-lg md:text-xl"
+                    ? "text-sm sm:text-lg md:text-xl text-[#057e7f]"
+                    : "text-base sm:text-lg md:text-xl text-[#057e7f]"
                 }`}
               >
                 TealSkills
@@ -248,9 +248,9 @@ function Shell({ children }) {
             <div className="flex items-center">
               <button
                 onClick={logout}
-                className={`rounded-md text-[#057e7f] hover:bg-[#057e7f]/10 ${
+                className={`rounded-md hover:bg-[#057e7f]/10 ${
                   isAdmin ? "p-1.5 sm:p-2" : "p-2 sm:p-2.5"
-                }`}
+                } text-[#057e7f]`}
                 aria-label="Logout"
               >
                 {/* Icône porte */}
