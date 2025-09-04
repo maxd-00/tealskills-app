@@ -204,11 +204,43 @@ function Shell({ children }) {
               >
                 TealSkills
               </NavLink>
-              <NavLink className={`${navLinkClass}`} to="/okr">OKR</NavLink>
-              <NavLink className={`${navLinkClass}`} to="/role">Role</NavLink>
-              <NavLink className={`${navLinkClass}`} to="/global">Global</NavLink>
+              <NavLink
+                className={`${navLinkClass} ${
+                  isAdmin
+                    ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
+                    : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
+                }`}
+                to="/okr"
+              >
+                OKR
+              </NavLink>
+              <NavLink
+                className={`${navLinkClass} ${
+                  isAdmin
+                    ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
+                    : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
+                }`}
+                to="/role"
+              >
+                Role
+              </NavLink>
+              <NavLink
+                className={`${navLinkClass} ${
+                  isAdmin
+                    ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
+                    : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
+                }`}
+                to="/global"
+              >
+                Global
+              </NavLink>
               {isAdmin && (
-                <NavLink className={`${navLinkClass}`} to="/admin">Admin</NavLink>
+                <NavLink
+                  className={`${navLinkClass} px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base`}
+                  to="/admin"
+                >
+                  Admin
+                </NavLink>
               )}
             </div>
 
@@ -216,9 +248,9 @@ function Shell({ children }) {
             <div className="flex items-center">
               <button
                 onClick={logout}
-                className={`rounded-md hover:bg-[#057e7f]/10 ${
+                className={`rounded-md hover:bg-[#057e7f]/10 !text-[#057e7f] ${
                   isAdmin ? "p-1.5 sm:p-2" : "p-2 sm:p-2.5"
-                } !text-[#057e7f]`}
+                }`}
                 aria-label="Logout"
               >
                 {/* Icône porte */}
