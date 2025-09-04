@@ -2932,7 +2932,7 @@ function RolePage() {
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // ----- utils géométrie / rendu (identiques à avant) -----
+  // ----- utils géométrie / rendu (identiques à avant, sauf labels dynamiques) -----
   const rgba = (hex, a) => {
     const h = hex.replace("#", "");
     const n = parseInt(h, 16);
@@ -2957,8 +2957,9 @@ function RolePage() {
   };
 
   // Courbe le label de catégorie (Technical inversé)
+  // ⬇️ font-size rendu dynamique + labels n’absorbent pas les clics
   const renderCategoryCurvedLabel = (props) => {
-    const { cx, cy, innerRadius, startAngle, endAngle, name, index } = props;
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, name, index } = props;
     const LABEL_OFFSET = 30;
     const rLabel = innerRadius + LABEL_OFFSET;
     const PAD_DEG = 6;
@@ -2971,10 +2972,14 @@ function RolePage() {
       : arcPath(cx, cy, rLabel, s, e, 1);
 
     const id = `cat-arc-${index}-${Math.round(s)}-${Math.round(e)}-${forceReverse ? "rev" : "fwd"}`;
+
+    // Taille de police proportionnelle au rayon → responsive
+    const fontSize = Math.max(12, Math.round(outerRadius * 0.12));
+
     return (
       <>
         <defs><path id={id} d={d} /></defs>
-        <text fill="#ffffff" fontWeight="700" fontSize="16">
+        <text fill="#ffffff" fontWeight="700" fontSize={fontSize} style={{ pointerEvents: "none" }}>
           <textPath href={`#${id}`} startOffset="50%" textAnchor="middle">
             {name}
           </textPath>
@@ -3009,12 +3014,14 @@ function RolePage() {
     return lines;
   }
 
-  // Label radial (jusqu'à 3 lignes)
-  const makeOuterRadialLabelAdvanced = (total, innerR, outerR, category) => (props) => {
-    const { cx, cy, midAngle, name, index } = props;
-    const padding = 10;
-    const startR = innerR + padding;
-    const endR   = outerR - padding;
+  // Label radial (jusqu'à 3 lignes) — ⬇️ version responsive (utilise les rayons réels du Pie)
+  const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
+    const { cx, cy, midAngle, name, index, innerRadius, outerRadius } = props;
+
+    // padding en fonction de la taille
+    const padding = Math.max(8, Math.round(outerRadius * 0.04));
+    const startR = innerRadius + padding;
+    const endR   = outerRadius - padding;
     const rMid   = (startR + endR) / 2;
 
     const arcDegPerSlice = total > 0 ? (120 / total) : 0;
@@ -3029,6 +3036,7 @@ function RolePage() {
     const x0 = cx + rMid * Math.cos(ang);
     const y0 = cy + rMid * Math.sin(ang);
 
+    // capacité de texte proportionnelle à l’épaisseur disponible
     const available = endR - startR;
     const charsPerLine = Math.max(6, Math.floor(available / 7));
     const lines = splitLines(name, charsPerLine, 3);
@@ -3036,13 +3044,16 @@ function RolePage() {
     const dySets = { 1: ["0"], 2: ["-0.6em", "1.2em"], 3: ["-1.2em", "0", "1.2em"] };
     const dyVals = dySets[Math.min(3, lines.length)] || ["0"];
 
+    // font-size en fonction du rayon
+    const fontSize = Math.max(10, Math.round(outerRadius * 0.10));
+
     return (
       <text
         x={x0}
         y={y0}
         transform={`rotate(${rotateDeg} ${x0} ${y0})`}
         fill="#ffffff"
-        fontSize="12"
+        fontSize={fontSize}
         fontWeight="600"
         textAnchor="middle"
         dominantBaseline="middle"
@@ -3058,37 +3069,36 @@ function RolePage() {
   };
 
   // ----- Chargements -----
-useEffect(() => {
-  if (!userId) return;
-  (async () => {
-    // Rôles + job_role_id de l'utilisateur
-    const [{ data: defs }, { data: prof }] = await Promise.all([
-      supabase.from("roles_definitions").select("id, role, definition").order("role", { ascending: true }),
-      supabase.from("profiles").select("job_role_id").eq("id", userId).single(),
-    ]);
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      // Rôles + job_role_id de l'utilisateur
+      const [{ data: defs }, { data: prof }] = await Promise.all([
+        supabase.from("roles_definitions").select("id, role, definition").order("role", { ascending: true }),
+        supabase.from("profiles").select("job_role_id").eq("id", userId).single(),
+      ]);
 
-    const list = defs || [];
-    setRoles(list.map(d => ({ role: d.role, definition: d.definition, id: d.id })));
+      const list = defs || [];
+      setRoles(list.map(d => ({ role: d.role, definition: d.definition, id: d.id })));
 
-    const userRoleId = prof?.job_role_id || null;
-    const userRoleObj = list.find(r => r.id === userRoleId);
+      const userRoleId = prof?.job_role_id || null;
+      const userRoleObj = list.find(r => r.id === userRoleId);
 
-    const initialRole = userRoleObj?.role || list[0]?.role || "";
-    setActiveRole(userRoleObj?.role || "");
-    setSelectedRole(initialRole);
-    setDefinition(list.find(r => r.role === initialRole)?.definition || "");
-  })();
-}, [userId]);
+      const initialRole = userRoleObj?.role || list[0]?.role || "";
+      setActiveRole(userRoleObj?.role || "");
+      setSelectedRole(initialRole);
+      setDefinition(list.find(r => r.role === initialRole)?.definition || "");
+    })();
+  }, [userId]);
 
-
-  // Versions (comme OKR). Si tu as rendu les versions « par utilisateur », on filtre par user_id = current user.
+  // Versions (comme OKR)
   useEffect(() => {
     if (!userId) return;
     (async () => {
       const { data, error } = await supabase
         .from("okr_versions")
         .select("id,label,is_active,user_id,created_at")
-        .or(`user_id.eq.${userId},user_id.is.null`)   // accepte versions globales (null) ou personnelles
+        .or(`user_id.eq.${userId},user_id.is.null`)
         .order("created_at", { ascending: false });
       if (error) { console.error(error); return; }
       setVersions(data || []);
@@ -3160,7 +3170,6 @@ useEffect(() => {
     if (!userId || !selectedComp?.id || !versionId) return;
     setSaving(true);
     try {
-      // upsert sur (user_id, version_id, competency_id)
       const payload = {
         user_id: userId,
         version_id: versionId,
@@ -3211,80 +3220,87 @@ useEffect(() => {
         {definition ? definition : "No definition for this role."}
       </p>
 
-      {/* Pie chart */}
-      <div className="role-chart bg-white rounded-2xl shadow p-4 h-[620px]">
+      {/* Pie chart — responsive plein écran (carré basé sur la largeur) */}
+      <div className="role-chart bg-white rounded-2xl shadow p-4">
         <style>{`.role-chart .recharts-tooltip-wrapper{display:none!important;}`}</style>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            {/* Anneau intérieur */}
-            <Pie
-              data={innerData}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={70}
-              outerRadius={135}
-              startAngle={90}
-              endAngle={-270}
-              label={renderCategoryCurvedLabel}
-              labelLine={false}
-              isAnimationActive={false}
-            >
-              {innerData.map((d) => (
-                <Cell key={d.name} fill={CAT_COLOR[d.name]} />
-              ))}
-            </Pie>
-
-            {/* Anneau extérieur par catégorie */}
-            {CAT_ORDER.map((cat) => {
-              const list = byCat[cat] || [];
-              if (!list.length) return null;
-              const { start, end } = anglesFor(cat);
-              const data = list.map((c, i) => ({
-                id: c.id,
-                name: c.competency,
-                category: cat,
-                description: c.description,
-                value: 1,
-                shade: 0.55 + (0.45 * (i % 6)) / 5,
-              }));
-
-              const innerR = 145;
-              const outerR = 280;
-              const RadialLabel = makeOuterRadialLabelAdvanced(list.length, innerR, outerR, cat);
-
-              return (
+        {/* Wrapper responsive */}
+        <div className="relative w-full">
+          {/* Carré basé sur la largeur (aucune hauteur fixe) */}
+          <div style={{ paddingTop: "100%" }} />
+          {/* Zone absolue qui remplit ce carré */}
+          <div className="absolute inset-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                {/* Anneau intérieur (catégories) — % pour scaler */}
                 <Pie
-                  key={cat}
-                  data={data}
+                  data={innerData}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius={innerR}
-                  outerRadius={outerR}
-                  startAngle={start}
-                  endAngle={end}
-                  paddingAngle={1}
-                  minAngle={2}
-                  isAnimationActive={false}
-                  label={RadialLabel}
+                  innerRadius="28%"
+                  outerRadius="46%"
+                  startAngle={90}
+                  endAngle={-270}
+                  label={renderCategoryCurvedLabel}
                   labelLine={false}
-                  onClick={(_, idx) => {
-                    const d = data[idx];
-                    setSelectedComp({
-                      id: d.id,
-                      title: d.name,
-                      description: d.description,
-                      category: cat,
-                    });
-                  }}
+                  isAnimationActive={false}
                 >
-                  {data.map((d) => (
-                    <Cell key={d.id} fill={rgba(CAT_COLOR[cat], d.shade)} cursor="pointer" />
+                  {innerData.map((d) => (
+                    <Cell key={d.name} fill={CAT_COLOR[d.name]} />
                   ))}
                 </Pie>
-              );
-            })}
-          </PieChart>
-        </ResponsiveContainer>
+
+                {/* Anneau extérieur par catégorie — % pour scaler */}
+                {CAT_ORDER.map((cat) => {
+                  const list = byCat[cat] || [];
+                  if (!list.length) return null;
+                  const { start, end } = anglesFor(cat);
+                  const data = list.map((c, i) => ({
+                    id: c.id,
+                    name: c.competency,
+                    category: cat,
+                    description: c.description,
+                    value: 1,
+                    shade: 0.55 + (0.45 * (i % 6)) / 5,
+                  }));
+
+                  // Label radial responsive (utilise les rayons réels fournis par Recharts)
+                  const RadialLabel = makeOuterRadialLabelAdvanced(list.length, cat);
+
+                  return (
+                    <Pie
+                      key={cat}
+                      data={data}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius="56%"
+                      outerRadius="78%"
+                      startAngle={start}
+                      endAngle={end}
+                      paddingAngle={1}
+                      minAngle={2}
+                      isAnimationActive={false}
+                      label={RadialLabel}
+                      labelLine={false}
+                      onClick={(_, idx) => {
+                        const d = data[idx];
+                        setSelectedComp({
+                          id: d.id,
+                          title: d.name,
+                          description: d.description,
+                          category: cat,
+                        });
+                      }}
+                    >
+                      {data.map((d) => (
+                        <Cell key={d.id} fill={rgba(CAT_COLOR[cat], d.shade)} cursor="pointer" />
+                      ))}
+                    </Pie>
+                  );
+                })}
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       {/* Panneau: compétence sélectionnée + commentaire par version */}
@@ -3319,7 +3335,6 @@ useEffect(() => {
 
           {/* Commentaire utilisateur, lié à (user, version, compétence) */}
           <div className="grid gap-2">
-
             <textarea
               rows={4}
               className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
@@ -3342,6 +3357,7 @@ useEffect(() => {
     </section>
   );
 }
+
 
 
 
