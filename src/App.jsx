@@ -132,14 +132,6 @@ const ROLES_CATEGORY_INDEX = Object.fromEntries(
   ROLES_CATEGORIES_NEW.map((c, i) => [c, i])
 );
 
-
-
-/**
- * ==============================
- *  LAYOUT
- * ==============================
- */
-
 function Shell({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -148,7 +140,7 @@ function Shell({ children }) {
   // Cacher la navbar sur /login
   const isLogin = location.pathname === "/login";
 
-  // Détecter si l'utilisateur est admin (lecture du profil)
+  // Rôle admin
   const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -167,19 +159,19 @@ function Shell({ children }) {
     return () => { cancelled = true; };
   }, [session?.user?.id]);
 
-  // Logout standard
+  // Logout
   const logout = async () => {
     await supabase.auth.signOut();
     navigate("/login", { replace: true });
   };
 
-  // Style des liens de la navbar (actif/inactif)
+  // Liens NAV — responsive padding & font
   const navLinkClass = ({ isActive }) =>
-    `px-3 py-1.5 rounded-md text-sm ${
-      isActive
-        ? "bg-[#057e7f] text-white"
-        : "text-slate-700 hover:bg-slate-100"
-    }`;
+    `rounded-md transition-colors
+     px-2 py-1 text-[13px]
+     sm:px-3 sm:py-1.5 sm:text-sm
+     md:px-3 md:py-2 md:text-base
+     ${isActive ? "bg-[#057e7f] text-white" : "text-slate-700 hover:bg-slate-100"}`;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -187,16 +179,20 @@ function Shell({ children }) {
       {!isLogin && (
         <div
           id="app-navbar"
-          className="fixed top-0 left-0 right-0 z-[9999] border-b border-slate-200 bg-white"
-          style={{
-            height: "64px",
-            paddingTop: "env(safe-area-inset-top)",
-          }}
+          className="
+            fixed top-0 left-0 right-0 z-[9999]
+            border-b border-slate-200 bg-white
+            pt-[env(safe-area-inset-top)]
+            h-14 md:h-16 lg:h-20
+          "
         >
-          <div className="flex items-center justify-between h-full px-4">
+          <div className="flex items-center justify-between h-full px-3 sm:px-4">
             {/* Gauche : logo + liens */}
-            <div className="flex items-center space-x-4">
-              <NavLink to="/" className="text-lg font-bold text-[#057e7f]">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+              <NavLink
+                to="/"
+                className="font-bold text-[#057e7f] text-base sm:text-lg md:text-xl"
+              >
                 TealSkills
               </NavLink>
               <NavLink className={navLinkClass} to="/okr">OKR</NavLink>
@@ -209,16 +205,16 @@ function Shell({ children }) {
               )}
             </div>
 
-            {/* Droite : email + logout */}
-            <div className="flex items-center space-x-2">
-              {session?.user?.email && (
-                <span className="text-sm text-slate-600">
-                  {session.user.email}
-                </span>
-              )}
+            {/* Droite : uniquement le bouton Logout (email masqué) */}
+            <div className="flex items-center">
               <button
                 onClick={logout}
-                className="text-sm px-3 py-1.5 rounded-md bg-[#057e7f] text-white hover:opacity-90"
+                className="
+                  rounded-md bg-[#057e7f] text-white hover:opacity-90
+                  text-[13px] px-2.5 py-1
+                  sm:text-sm sm:px-3 sm:py-1.5
+                  md:text-base md:px-3 md:py-2
+                "
               >
                 Logout
               </button>
@@ -227,24 +223,18 @@ function Shell({ children }) {
         </div>
       )}
 
-      {/* Contenu : retire le padding-top quand la navbar est cachée */}
+      {/* Contenu : padding-top responsive qui suit la hauteur de la navbar */}
       <main
-        className="max-w-6xl mx-auto px-4 pb-10"
-        style={{
-          paddingTop: isLogin ? 0 : "calc(64px + env(safe-area-inset-top))",
-        }}
+        className={`
+          max-w-6xl mx-auto px-3 sm:px-4 pb-10
+          ${isLogin ? "" : "pt-14 md:pt-16 lg:pt-20"}
+        `}
       >
         {children}
       </main>
     </div>
   );
 }
-
-
-
-
-
-
 
 
 
