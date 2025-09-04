@@ -210,7 +210,7 @@ function Shell({ children }) {
                     ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
                     : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
                 }`}
-                to="/okr"
+                to="/okr?view=global"
               >
                 OKR
               </NavLink>
@@ -3337,7 +3337,7 @@ export default function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/okr" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
+              <Route path="/okr?view=global" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
               <Route path="/okr/:category" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
               <Route path="/global" element={<ProtectedRoute><Global /></ProtectedRoute>} />
               <Route path="/role" element={<ProtectedRoute><RolePage /></ProtectedRoute>} />
