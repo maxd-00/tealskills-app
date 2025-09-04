@@ -210,7 +210,7 @@ function Shell({ children }) {
                     ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
                     : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
                 }`}
-                to="/okr"
+                to="/okr?view=global"
               >
                 OKR
               </NavLink>
@@ -536,9 +536,9 @@ function OKR() {
   const { session } = useAuth();
   const userId = session?.user?.id;
 
-  // Catégories (avec "Global")
+  // Catégories (sans "Global" dans les onglets)
   const CATS = ["Client", "Myself", "Company"];
-  const [category, setCategory] = useState("Global");
+  const [category, setCategory] = useState("Client");
 
   // Versions propres à l'utilisateur
   const [versions, setVersions] = useState([]);
@@ -558,42 +558,31 @@ function OKR() {
   const [newOKR, setNewOKR] = useState("");
 
   const { setToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // ===== Helpers pour le piechart "Global" façon Role =====
-  const rgba = (hex, a) => {
-    const h = hex.replace("#", "");
-    const n = parseInt(h, 16);
-    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-    return `rgba(${r},${g},${b},${a})`;
-  };
+  // ===== Helpers Piechart Global =====
   const polarToXY = (cx, cy, r, angleDeg) => {
     const rad = angleDeg * Math.PI / 180;
     return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
   };
   const arcPath = (cx, cy, r, startAngle, endAngle, sweep = 1) => {
-    // Recharts utilise des angles horaires → inverser pour l'espace SVG
     const start = polarToXY(cx, cy, r, -startAngle);
     const end = polarToXY(cx, cy, r, -endAngle);
     const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
     return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} ${sweep} ${end.x} ${end.y}`;
   };
-  // Libellé courbé sur l'anneau (comme Role). On "retourne" le texte pour "Myself" pour lisibilité.
   const renderCategoryCurvedLabel = (props) => {
     const { cx, cy, innerRadius, startAngle, endAngle, name, index } = props;
-    const LABEL_OFFSET = 30; // distance depuis le bord intérieur
+    const LABEL_OFFSET = 30;
     const rLabel = innerRadius + LABEL_OFFSET;
-
     const PAD_DEG = 6;
     const s = startAngle - PAD_DEG;
     const e = endAngle + PAD_DEG;
-
     const forceReverse = name === "Myself";
     const d = forceReverse
-      ? arcPath(cx, cy, rLabel, e, s, 0)  // inversé
-      : arcPath(cx, cy, rLabel, s, e, 1); // normal
-
+      ? arcPath(cx, cy, rLabel, e, s, 0)
+      : arcPath(cx, cy, rLabel, s, e, 1);
     const id = `okr-global-arc-${index}-${Math.round(s)}-${Math.round(e)}-${forceReverse ? "rev" : "fwd"}`;
-
     return (
       <>
         <defs>
@@ -608,7 +597,7 @@ function OKR() {
     );
   };
 
-  // ===== Chargement des versions (par utilisateur) =====
+  // ===== Load versions =====
   useEffect(() => {
     if (!userId) return;
     (async () => {
@@ -619,7 +608,6 @@ function OKR() {
         .order("created_at", { ascending: false });
       if (error) {
         console.error(error);
-        alert(`Load versions failed: ${error.message}`);
         return;
       }
       setVersions(data || []);
@@ -628,7 +616,7 @@ function OKR() {
     })();
   }, [userId]);
 
-  // ===== Chargement OKRs+answers pour la catégorie (sauf Global) =====
+  // ===== Load OKRs + answers (except Global) =====
   useEffect(() => {
     if (!userId || !versionId) return;
     if (category === "Global") { setItems([]); setAnswers({}); return; }
@@ -638,30 +626,26 @@ function OKR() {
   async function loadOKRs() {
     setLoading(true);
     try {
-      const { data: okrs, error: err1 } = await supabase
+      const { data: okrs } = await supabase
         .from("okr_items")
-        .select("id, title, description")
+        .select("id,title,description")
         .eq("version_id", versionId)
         .eq("assigned_user_id", userId)
         .eq("category", category)
         .order("order_index", { ascending: true });
-      if (err1) throw err1;
 
-      const { data: userAnswers, error: err2 } = await supabase
+      const { data: userAnswers } = await supabase
         .from("user_okr_answers")
         .select("item_id,status,notes")
         .eq("version_id", versionId)
         .eq("user_id", userId);
-      if (err2) throw err2;
 
       const map = {};
       (userAnswers || []).forEach(a => { map[a.item_id] = { status: a.status, notes: a.notes || "" }; });
-
       setItems(okrs || []);
       setAnswers(map);
     } catch (e) {
       console.error(e);
-      alert(`Load OKRs failed: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -679,118 +663,94 @@ function OKR() {
         user_id: userId,
         version_id: versionId,
         item_id: it.id,
-        status: ans.status || "orange",
-        notes: ans.notes || ""
+        status: ans.status,
+        notes: ans.notes
       });
     }
     setToast("Changes saved!");
     setTimeout(() => setToast(""), 2000);
   }
 
-  // Ajout OKR via modal
+  // Ajout OKR
   async function confirmAddOKR() {
     const raw = newOKR.trim();
     if (!raw) return;
     if (category === "Global") {
-      alert("Select a specific category (Client/Myself/Company) to add an OKR.");
+      alert("Select Client/Myself/Company to add an OKR.");
       return;
     }
     const autoTitle = raw.split("\n")[0].slice(0, 80);
-    const payload = {
+    await supabase.from("okr_items").insert({
       version_id: versionId,
       assigned_user_id: userId,
       category,
       title: autoTitle,
       description: raw,
       order_index: (items?.length || 0) + 1,
-    };
-    try {
-      const { error } = await supabase.from("okr_items").insert(payload);
-      if (error) throw error;
-      setShowAdd(false);
-      setNewOKR("");
-      await loadOKRs();
-      setToast("OKR added");
-      setTimeout(() => setToast(""), 1500);
-    } catch (e) {
-      alert(`Add OKR failed: ${e.message}`);
-    }
+    });
+    setShowAdd(false);
+    setNewOKR("");
+    await loadOKRs();
+    setToast("OKR added");
+    setTimeout(() => setToast(""), 1500);
   }
 
-  // Suppression OKR
   async function deleteItem(id) {
     if (!isActiveSelected) return;
-    try {
-      const { error } = await supabase.from("okr_items").delete().eq("id", id);
-      if (error) throw error;
-      await loadOKRs();
-      setToast("OKR deleted");
-      setTimeout(() => setToast(""), 1500);
-    } catch (e) {
-      alert(`Delete OKR failed: ${e.message}`);
-    }
+    await supabase.from("okr_items").delete().eq("id", id);
+    await loadOKRs();
+    setToast("OKR deleted");
+    setTimeout(() => setToast(""), 1500);
   }
 
-  // ===== Global — Piechart façon Role (pas d'animation, pas de tooltip) =====
+  // ===== Global Pie =====
   const [globalPie, setGlobalPie] = useState([]);
   useEffect(() => {
     if (!userId || !versionId) { setGlobalPie([]); return; }
     if (category !== "Global") return;
     (async () => {
-      try {
-        const { data: okrs, error: e1 } = await supabase
-          .from("okr_items")
-          .select("id,category")
-          .eq("version_id", versionId)
-          .eq("assigned_user_id", userId);
-        if (e1) throw e1;
+      const { data: okrs } = await supabase
+        .from("okr_items")
+        .select("id,category")
+        .eq("version_id", versionId)
+        .eq("assigned_user_id", userId);
+      const { data: ans } = await supabase
+        .from("user_okr_answers")
+        .select("item_id,status")
+        .eq("version_id", versionId)
+        .eq("user_id", userId);
 
-        const { data: ans, error: e2 } = await supabase
-          .from("user_okr_answers")
-          .select("item_id,status")
-          .eq("version_id", versionId)
-          .eq("user_id", userId);
-        if (e2) throw e2;
+      const cats = ["Client","Myself","Company"];
+      const byCat = { Client: [], Myself: [], Company: [] };
+      (ans || []).forEach(a => {
+        const it = (okrs || []).find(i => i.id === a.item_id);
+        if (it && cats.includes(it.category)) byCat[it.category].push(a.status);
+      });
+      const agg = arr => (arr.includes("red") ? "red" : arr.includes("orange") ? "orange" : arr.length ? "green" : "gray");
+      const colorFor = k =>
+        k === "green" ? "#22c55e" : k === "orange" ? "#f59e0b" : k === "red" ? "#ef4444" : "#cbd5e1";
 
-        const cats = ["Client","Myself","Company"];
-        const byCat = { Client: [], Myself: [], Company: [] };
-        (ans || []).forEach(a => {
-          const it = (okrs || []).find(i => i.id === a.item_id);
-          if (it && cats.includes(it.category)) byCat[it.category].push(a.status);
-        });
-        const agg = (arr) => (arr.includes("red") ? "red" : arr.includes("orange") ? "orange" : arr.length ? "green" : "gray");
-        const colorFor = (k) =>
-          k === "green" ? "#22c55e" : k === "orange" ? "#f59e0b" : k === "red" ? "#ef4444" : "#cbd5e1";
-
-        const pie = cats.map(cat => {
-          const level = agg(byCat[cat]);
-          return { name: cat, value: 1, fill: colorFor(level), level };
-        });
-        setGlobalPie(pie);
-      } catch (e) {
-        console.error(e);
-        setGlobalPie([]);
-      }
+      const pie = cats.map(cat => {
+        const level = agg(byCat[cat]);
+        return { name: cat, value: 1, fill: colorFor(level) };
+      });
+      setGlobalPie(pie);
     })();
   }, [category, userId, versionId]);
 
-  const goToCat = (name) => setCategory(name);
+  // Forcer Global quand ?view=global
+  useEffect(() => {
+    if (searchParams.get("view") === "global") {
+      setCategory("Global");
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-bold">
-  <button
-    type="button"
-    onClick={() => setCategory("Global")}
-    className="no-underline !text-[#057e7f] hover:underline"
-    title="Voir le résumé global"
-  >
-    My OKRs
-  </button>
-</h1>
+      <h1 className="text-2xl font-bold text-[#057e7f]">My OKRs</h1>
 
-
-      {/* Year (versions, propres à l'utilisateur) */}
+      {/* Year */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-slate-600">Year</span>
         <select
@@ -804,7 +764,6 @@ function OKR() {
             </option>
           ))}
         </select>
-
         {!isActiveSelected && (
           <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">
             Read-only: inactive year
@@ -812,14 +771,14 @@ function OKR() {
         )}
       </div>
 
-      {/* Category Tabs (avec Global) */}
+      {/* Category Tabs (sans Global) */}
       <div className="flex flex-wrap gap-2 bg-slate-100 rounded-full p-1 w-fit">
         {CATS.map((cat) => (
           <button
             key={cat}
-            onClick={() => setCategory(cat)}
+            onClick={() => { setCategory(cat); setSearchParams({}, { replace: true }); }}
             className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
-              category === cat ? "bg-[#057e7f] text-white shadow font-medium" : "bg-white text-[#057e7f]"
+              category === cat ? "bg-[#057e7f] text-white shadow font-medium" : "bg-white !text-[#057e7f]"
             }`}
             type="button"
           >
@@ -828,48 +787,42 @@ function OKR() {
         ))}
       </div>
 
-      {/* GLOBAL: Piechart façon Role (pas d’animation / pas de tooltip) */}
+      {/* GLOBAL */}
       {category === "Global" && (
-        <>
-          {globalPie.length > 0 ? (
-            <div className="bg-white rounded-2xl shadow p-3 sm:p-4">
-              {/* Wrapper largeur d'abord : prend 100% en mobile, max 720px en desktop */}
-              <div className="relative mx-auto" style={{ width: 'min(100%, 720px)' }}>
-                {/* Carré basé sur la largeur (aucune hauteur fixe) */}
-                <div style={{ paddingTop: '100%' }} />
-                {/* Zone absolue qui remplit ce carré */}
-                <div className="absolute inset-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={globalPie}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={70}
-                        outerRadius={135}
-                        startAngle={90}
-                        endAngle={-270}
-                        label={renderCategoryCurvedLabel}
-                        labelLine={false}
-                        isAnimationActive={false}
-                        onClick={(slice) => slice?.name && goToCat(slice.name)}
-                      >
-                        {globalPie.map((entry, i) => (
-                          <Cell key={i} fill={entry.fill} cursor="pointer" />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+        globalPie.length > 0 ? (
+          <div className="bg-white rounded-2xl shadow p-3 sm:p-4">
+            <div className="relative mx-auto" style={{ width: 'min(100%, 720px)' }}>
+              <div style={{ paddingTop: '100%' }} />
+              <div className="absolute inset-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={globalPie}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={70}
+                      outerRadius={135}
+                      startAngle={90}
+                      endAngle={-270}
+                      label={renderCategoryCurvedLabel}
+                      labelLine={false}
+                      isAnimationActive={false}
+                    >
+                      {globalPie.map((entry, i) => (
+                        <Cell key={i} fill={entry.fill} cursor="pointer" />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
-          ) : (
-            <div className="text-slate-500">No OKR data for this year.</div>
-          )}
-        </>
+          </div>
+        ) : (
+          <div className="text-slate-500">No OKR data for this year.</div>
+        )
       )}
 
-      {/* LISTE OKRs (pour Client/Myself/Company) */}
+      {/* LISTE */}
       {category !== "Global" && (
         <>
           {loading ? (
@@ -879,24 +832,16 @@ function OKR() {
           ) : (
             <div className="space-y-4">
               {items.map(item => (
-                <div
-                  key={item.id}
-                  className="relative bg-white p-4 rounded-xl shadow space-y-2"
-                >
-                  {/* Delete */}
+                <div key={item.id} className="relative bg-white p-4 rounded-xl shadow space-y-2">
                   <button
                     type="button"
                     onClick={() => deleteItem(item.id)}
                     disabled={!isActiveSelected}
-                    title={!isActiveSelected ? "Read-only (inactive year)" : "Delete OKR"}
                     className={`absolute right-2 top-2 w-7 h-7 rounded-full flex items-center justify-center border bg-white ${isActiveSelected ? "hover:bg-slate-50" : "opacity-50 cursor-not-allowed"}`}
                   >
                     <span className="text-red-600 text-lg leading-none">×</span>
                   </button>
-
                   <div className="font-medium text-slate-800">{item.title || "—"}</div>
-
-                  {/* Sélecteur couleur (statut) */}
                   <div className="flex gap-3">
                     {["green", "orange", "red"].map(color => {
                       const selected = answers[item.id]?.status === color;
@@ -912,14 +857,11 @@ function OKR() {
                           onClick={() => isActiveSelected && updateAnswer(item.id, "status", color)}
                           disabled={!isActiveSelected}
                           className={`w-6 h-6 rounded-full border-2 ${base} ${!isActiveSelected ? "opacity-50 cursor-not-allowed" : ""}`}
-                          title={!isActiveSelected ? "Read-only (inactive year)" : undefined}
                           type="button"
                         />
                       );
                     })}
                   </div>
-
-                  {/* Notes */}
                   <textarea
                     className={`border rounded-md p-2 w-full ${isActiveSelected ? "bg-white" : "bg-slate-50"} text-black border-slate-200 focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f] ${!isActiveSelected ? "opacity-70" : ""}`}
                     rows={2}
@@ -934,12 +876,11 @@ function OKR() {
             </div>
           )}
 
-          {/* Actions (Add OKR + Save) */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowAdd(true)}
               disabled={!isActiveSelected || category === "Global"}
-              className={`px-4 py-2 rounded-full ${isActiveSelected && category !== "Global" ? "bg-[#057e7f] text-white hover:opacity-90" : "bg-slate-200 text-slate-500 cursor-not-allowed"}`}
+              className={`px-4 py-2 rounded-full ${isActiveSelected ? "bg-[#057e7f] text-white hover:opacity-90" : "bg-slate-200 text-slate-500 cursor-not-allowed"}`}
               type="button"
             >
               Add OKR
@@ -956,16 +897,13 @@ function OKR() {
         </>
       )}
 
-      {/* MODAL Add OKR */}
+      {/* MODAL */}
       {showAdd && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowAdd(false)} />
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-4 border border-slate-200">
-            <div className="mb-2">
-              <h3 className="text-lg font-semibold text-[#057e7f]">New OKR — {category}</h3>
-            </div>
-
-            <label className="grid gap-1">
+            <h3 className="text-lg font-semibold text-[#057e7f]">New OKR — {category}</h3>
+            <label className="grid gap-1 mt-2">
               <span className="text-sm text-slate-600">Description (max 3 lines)</span>
               <textarea
                 className="border border-slate-200 rounded-md p-2 h-24 bg-white text-black focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
@@ -978,14 +916,9 @@ function OKR() {
                 placeholder="Write the OKR text here..."
               />
             </label>
-
             <div className="mt-3 flex items-center justify-end gap-2">
-              <button onClick={() => setShowAdd(false)} className="px-4 py-2 rounded-full bg-white text-[#057e7f] border border-[#057e7f] hover:bg-slate-50">
-                Cancel
-              </button>
-              <button onClick={confirmAddOKR} className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90">
-                Add
-              </button>
+              <button onClick={() => setShowAdd(false)} className="px-4 py-2 rounded-full bg-white text-[#057e7f] border border-[#057e7f] hover:bg-slate-50">Cancel</button>
+              <button onClick={confirmAddOKR} className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90">Add</button>
             </div>
           </div>
         </div>
@@ -993,6 +926,7 @@ function OKR() {
     </section>
   );
 }
+
 
 
 
