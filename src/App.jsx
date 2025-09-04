@@ -592,7 +592,7 @@ function OKR() {
         <defs>
           <path id={id} d={d} />
         </defs>
-        <text fill="#ffffff" fontWeight="700" fontSize="16">
+        <text fill="#ffffff" fontWeight="700" fontSize="16" style={{ pointerEvents: "none" }}>
           <textPath href={`#${id}`} startOffset="50%" textAnchor="middle">
             {name}
           </textPath>
@@ -600,6 +600,17 @@ function OKR() {
       </>
     );
   };
+
+// Clic sur une part du pie → switch vers la catégorie correspondante
+const handleSliceClick = (name) => {
+  if (!name) return;
+  setCategory(name);
+  // on nettoie d'éventuels paramètres d'URL
+  if (typeof setSearchParams === "function") {
+    setSearchParams({}, { replace: true });
+  }
+};
+
 
   // ===== Load versions =====
   useEffect(() => {
@@ -815,9 +826,14 @@ function OKR() {
             labelLine={false}
             isAnimationActive={false}
           >
-            {globalPie.map((entry, i) => (
-              <Cell key={i} fill={entry.fill} cursor="pointer" />
-            ))}
+ {globalPie.map((entry, i) => (
+   <Cell
+     key={i}
+     fill={entry.fill}
+     style={{ cursor: "pointer" }}
+     onClick={() => handleSliceClick(entry.name)}
+   />
+ ))}
           </Pie>
         </PieChart>
       </ResponsiveContainer>
