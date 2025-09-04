@@ -537,7 +537,7 @@ function OKR() {
   const userId = session?.user?.id;
 
   // Catégories (avec "Global")
-  const CATS = ["Global", "Client", "Myself", "Company"];
+  const CATS = ["Client", "Myself", "Company"];
   const [category, setCategory] = useState("Global");
 
   // Versions propres à l'utilisateur
@@ -778,7 +778,17 @@ function OKR() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-bold text-[#057e7f]">My OKRs</h1>
+      <h1 className="text-2xl font-bold">
+  <button
+    type="button"
+    onClick={() => setCategory("Global")}
+    className="no-underline !text-[#057e7f] hover:underline"
+    title="Voir le résumé global"
+  >
+    My OKRs
+  </button>
+</h1>
+
 
       {/* Year (versions, propres à l'utilisateur) */}
       <div className="flex flex-wrap items-center gap-2">
