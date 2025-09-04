@@ -166,12 +166,12 @@ function Shell({ children }) {
     navigate("/login", { replace: true });
   };
 
-  // Style des liens NAV (teal forcé, pas de soulignement)
+  // Style des liens NAV
   const navLinkClass = ({ isActive }) =>
-    `no-underline rounded-md transition-colors font-medium
+    `no-underline !text-[#057e7f] rounded-md transition-colors font-medium
      ${isActive
-        ? "bg-[#057e7f] text-white"
-        : "text-[#057e7f] hover:bg-[#057e7f]/10"}`;
+        ? "bg-[#057e7f] !text-white"
+        : "hover:bg-[#057e7f]/10"}`;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -196,51 +196,19 @@ function Shell({ children }) {
             >
               <NavLink
                 to="/"
-                className={`font-bold no-underline ${
+                className={`font-bold no-underline !text-[#057e7f] ${
                   isAdmin
-                    ? "text-sm sm:text-lg md:text-xl text-[#057e7f]"
-                    : "text-base sm:text-lg md:text-xl text-[#057e7f]"
+                    ? "text-sm sm:text-lg md:text-xl"
+                    : "text-base sm:text-lg md:text-xl"
                 }`}
               >
                 TealSkills
               </NavLink>
-              <NavLink
-                className={`${navLinkClass} ${
-                  isAdmin
-                    ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
-                    : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
-                }`}
-                to="/okr"
-              >
-                OKR
-              </NavLink>
-              <NavLink
-                className={`${navLinkClass} ${
-                  isAdmin
-                    ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
-                    : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
-                }`}
-                to="/role"
-              >
-                Role
-              </NavLink>
-              <NavLink
-                className={`${navLinkClass} ${
-                  isAdmin
-                    ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
-                    : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
-                }`}
-                to="/global"
-              >
-                Global
-              </NavLink>
+              <NavLink className={`${navLinkClass}`} to="/okr">OKR</NavLink>
+              <NavLink className={`${navLinkClass}`} to="/role">Role</NavLink>
+              <NavLink className={`${navLinkClass}`} to="/global">Global</NavLink>
               {isAdmin && (
-                <NavLink
-                  className={`${navLinkClass} px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base`}
-                  to="/admin"
-                >
-                  Admin
-                </NavLink>
+                <NavLink className={`${navLinkClass}`} to="/admin">Admin</NavLink>
               )}
             </div>
 
@@ -250,7 +218,7 @@ function Shell({ children }) {
                 onClick={logout}
                 className={`rounded-md hover:bg-[#057e7f]/10 ${
                   isAdmin ? "p-1.5 sm:p-2" : "p-2 sm:p-2.5"
-                } text-[#057e7f]`}
+                } !text-[#057e7f]`}
                 aria-label="Logout"
               >
                 {/* Icône porte */}
