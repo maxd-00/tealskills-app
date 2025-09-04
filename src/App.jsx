@@ -141,111 +141,40 @@ const ROLES_CATEGORY_INDEX = Object.fromEntries(
  */
 
 function Shell({ children }) {
-  const { session } = useAuth();
   const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const navigate = useNavigate();
-  const { toast } = useToast?.() || { toast: null };
-
-  useEffect(() => {
-    const fetchRole = async () => {
-      try {
-        if (!session?.user) return setIsAdmin(false);
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single();
-        setIsAdmin(!error && data?.role === "admin");
-      } catch {
-        setIsAdmin(false);
-      }
-    };
-    fetchRole();
-  }, [session]);
-
-  // Classe locale pour les liens
-  const navLinkClass = ({ isActive }) =>
-    "px-3 py-1.5 rounded-lg text-sm transition " +
-    (isActive ? "bg-[#057e7f] text-white" : "text-slate-800 hover:bg-slate-100");
+  const isLogin = location.pathname === "/login";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      {/* NAVBAR FIXE – hauteur 64px */}
-      <div
-        id="app-navbar"
-        className="fixed top-0 left-0 right-0 z-[9999] border-b border-slate-200 bg-white"
-        style={{
-          height: "64px",                        // h-16
-          paddingTop: "env(safe-area-inset-top)" // iOS notch
-        }}
-      >
-        <div className="max-w-6xl mx-auto h-full">
-          <div className="px-4 h-full flex items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="text-xl font-semibold tracking-tight text-[#057e7f]">
-                TealSkills
-              </div>
-              {/* Badge admin discret */}
-              {isAdmin && (
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#057e7f]/10 text-[#057e7f] border border-[#057e7f]/30">
-                  Admin
-                </span>
-              )}
-            </div>
-
-            {/* Liens : pas de wrap + scroll horizontal si besoin */}
-            <nav className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-              <NavLink className={navLinkClass} to="/">Home</NavLink>
-              <NavLink className={navLinkClass} to="/okr">OKR</NavLink>
-              <NavLink className={navLinkClass} to="/role">Role</NavLink>
-              <NavLink className={navLinkClass} to="/global">Global</NavLink>
-              {isAdmin && <NavLink className={navLinkClass} to="/admin">Admin</NavLink>}
-
-
-              {session ? (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await supabase.auth.signOut();
-                    navigate("/login", { replace: true });
-                  }}
-                  className="px-3 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-700 hover:bg-slate-50 shrink-0"
-                  aria-label="Sign out"
-                  title="Sign out"
-                >
-                  Logout
-                </button>
-              ) : (
-                <NavLink className={navLinkClass} to="/login">Se connecter</NavLink>
-              )}
-            </nav>
-          </div>
+      {/* NAVBAR : cachée sur /login */}
+      {!isLogin && (
+        <div
+          id="app-navbar"
+          className="fixed top-0 left-0 right-0 z-[9999] border-b border-slate-200 bg-white"
+          style={{
+            height: "64px",
+            paddingTop: "env(safe-area-inset-top)",
+          }}
+        >
+          {/* ⬇️ Garde ICI tout ton contenu de navbar existant (logo, liens, etc.) ⬇️ */}
+          {/* ... */}
         </div>
-      </div>
+      )}
 
-      {/* CONTENU – padding-top = hauteur navbar (+ notch) */}
+      {/* Contenu : retire le padding-top quand la navbar est cachée */}
       <main
         className="max-w-6xl mx-auto px-4 pb-10"
         style={{
-          paddingTop: "calc(64px + env(safe-area-inset-top))" // = h-16 + notch
+          paddingTop: isLogin ? 0 : "calc(64px + env(safe-area-inset-top))",
         }}
       >
-        {typeof children !== "undefined" ? children : <Outlet />}
+        {/* ⚠️ Si ton Shell utilise <Outlet />, remplace {children} par <Outlet /> */}
+        {children}
       </main>
-
-      <footer className="max-w-6xl mx-auto px-4 pb-10 text-xs text-slate-500">
-        Données stockées dans <strong>Postgres Supabase</strong> (RLS activé).
-      </footer>
-
-      {toast && (
-        <div className="fixed bottom-4 right-4 z-[120] bg-[#057e7f] text-white px-3 py-2 rounded-xl shadow">
-          {toast}
-        </div>
-      )}
     </div>
   );
 }
+
 
 
 
@@ -359,13 +288,31 @@ function Login() {
               autoComplete={mode === "signin" ? "current-password" : "new-password"}
             />
             <button
-              type="button"
-              onClick={()=>setShowPw(s=>!s)}
-              className="px-3 text-sm bg-[#057e7f] text-white hover:opacity-90"
-              aria-label={showPw ? "Hide password" : "Show password"}
-            >
-              {showPw ? "Hide" : "Show"}
-            </button>
+  type="button"
+  onClick={() => setShowPw(s => !s)}
+  aria-label={showPw ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+  className="px-2.5 bg-[#057e7f] text-white hover:opacity-90 flex items-center justify-center"
+  style={{ width: 36, height: 36 }} // 36px: confortable & visible
+>
+  {showPw ? (
+    // œil barré
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 3l18 18" />
+      <path d="M10.58 10.58a3 3 0 004.24 4.24" />
+      <path d="M9.88 5.09A9.77 9.77 0 0112 5c7 0 10 7 10 7a13.37 13.37 0 01-3.16 4.45" />
+      <path d="M6.12 6.12A13.37 13.37 0 002 12s3 7 10 7a9.77 9.77 0 003.09-.49" />
+    </svg>
+  ) : (
+    // œil
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )}
+</button>
+
           </div>
         </label>
 
