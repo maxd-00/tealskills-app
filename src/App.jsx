@@ -2956,34 +2956,78 @@ function RolePage() {
     return { start, end };
   };
 
-  // Courbe le label de catégorie (Technical inversé)
-  const renderCategoryCurvedLabel = (props) => {
-    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, name, index } = props;
-    const LABEL_OFFSET = 30;
-    const rLabel = innerRadius + LABEL_OFFSET;
-    const PAD_DEG = 6;
-    const s = startAngle - PAD_DEG;
-    const e = endAngle + PAD_DEG;
+  // ==== NOUVEAU : icônes blanches au centre à la place des titres ====
+  const renderCategoryIconLabel = (props) => {
+    const { cx, cy, innerRadius, outerRadius, midAngle, name } = props;
+    // position au milieu de l’anneau central
+    const r = (innerRadius + outerRadius) / 2;
+    const rad = (-midAngle * Math.PI) / 180;
+    const x = cx + r * Math.cos(rad);
+    const y = cy + r * Math.sin(rad);
 
-    const forceReverse = name === "Technical";
-    const d = forceReverse
-      ? arcPath(cx, cy, rLabel, e, s, 0)
-      : arcPath(cx, cy, rLabel, s, e, 1);
+    // taille de l’icône proportionnelle à l’anneau central
+    const S = Math.max(10, outerRadius * 0.22); // échelle icône
 
-    const id = `cat-arc-${index}-${Math.round(s)}-${Math.round(e)}-${forceReverse ? "rev" : "fwd"}`;
-    // Police un peu plus grande et responsive
-    const fontSize = Math.max(12, Math.round(outerRadius * 0.14));
+    const Gear = () => {
+      // petit "cog" simplifié
+      const teeth = Array.from({ length: 6 });
+      return (
+        <g transform={`translate(${x},${y})`} style={{ pointerEvents: "none" }}>
+          {/* dents */}
+          {teeth.map((_, i) => {
+            const a = (i * Math.PI * 2) / teeth.length;
+            const tx = Math.cos(a) * (S * 0.55);
+            const ty = Math.sin(a) * (S * 0.55);
+            const rdeg = (a * 180) / Math.PI;
+            return (
+              <rect
+                key={i}
+                x={-S * 0.08}
+                y={-S * 0.3}
+                width={S * 0.16}
+                height={S * 0.25}
+                fill="#fff"
+                transform={`translate(${x + tx - x},${y + ty - y}) rotate(${rdeg})`}
+              />
+            );
+          })}
+          {/* corps */}
+          <circle cx={x} cy={y} r={S * 0.38} fill="#fff" />
+          <circle cx={x} cy={y} r={S * 0.18} fill={CAT_COLOR.Technical} />
+        </g>
+      );
+    };
 
-    return (
-      <>
-        <defs><path id={id} d={d} /></defs>
-        <text fill="#ffffff" fontWeight="700" fontSize={fontSize} style={{ pointerEvents: "none" }}>
-          <textPath href={`#${id}`} startOffset="50%" textAnchor="middle">
-            {name}
-          </textPath>
-        </text>
-      </>
+    const Person = () => (
+      <g transform={`translate(${x},${y})`} style={{ pointerEvents: "none" }}>
+        {/* tête */}
+        <circle cx={x} cy={y - S * 0.18} r={S * 0.18} fill="#fff" />
+        {/* buste */}
+        <rect
+          x={x - S * 0.35}
+          y={y - S * 0.02}
+          width={S * 0.7}
+          height={S * 0.44}
+          rx={S * 0.12}
+          fill="#fff"
+        />
+      </g>
     );
+
+    const ChartUp = () => (
+      <g transform={`translate(${x},${y})`} style={{ pointerEvents: "none" }}>
+        {/* axe */}
+        <path d={`M ${x - S * 0.48} ${y + S * 0.30} L ${x - S * 0.48} ${y - S * 0.30} L ${x + S * 0.48} ${y - S * 0.30}`} stroke="#fff" strokeWidth={S * 0.08} fill="none" />
+        {/* ligne */}
+        <path d={`M ${x - S * 0.40} ${y + S * 0.15} L ${x - S * 0.15} ${y - S * 0.10} L ${x + S * 0.05} ${y - S * 0.02} L ${x + S * 0.35} ${y - S * 0.26}`} stroke="#fff" strokeWidth={S * 0.10} fill="none" />
+        {/* flèche */}
+        <path d={`M ${x + S * 0.35} ${y - S * 0.26} L ${x + S * 0.20} ${y - S * 0.38} L ${x + S * 0.48} ${y - S * 0.40} Z`} fill="#fff" />
+      </g>
+    );
+
+    if (name === "Technical") return <Gear />;
+    if (name === "Behavioral") return <Person />;
+    return <ChartUp />; // Business impact
   };
 
   // Split 1→3 lignes
@@ -3012,17 +3056,17 @@ function RolePage() {
     return lines;
   }
 
-  // Label radial (jusqu'à 3 lignes) — responsive
+  // Label radial (jusqu'à 3 lignes) — responsive, police + petite
   const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
     const { cx, cy, midAngle, name, index, innerRadius, outerRadius } = props;
 
-    const padding = Math.max(8, Math.round(outerRadius * 0.04));
+    const padding = Math.max(6, Math.round(outerRadius * 0.03)); // marge plus fine
     const startR = innerRadius + padding;
     const endR   = outerRadius - padding;
     const rMid   = (startR + endR) / 2;
 
     const arcDegPerSlice = total > 0 ? (120 / total) : 0;
-    if (arcDegPerSlice < 5) return null;
+    if (arcDegPerSlice < 4) return null;
 
     let flip = false;
     if (category === "Business impact") flip = true;
@@ -3040,8 +3084,8 @@ function RolePage() {
     const dySets = { 1: ["0"], 2: ["-0.6em", "1.2em"], 3: ["-1.2em", "0", "1.2em"] };
     const dyVals = dySets[Math.min(3, lines.length)] || ["0"];
 
-    // Police plus grande pour lisibilité
-    const fontSize = Math.max(12, Math.round(outerRadius * 0.13));
+    // Police réduite pour gagner de la place
+    const fontSize = Math.max(10, Math.round(outerRadius * 0.09));
 
     return (
       <text
@@ -3094,7 +3138,7 @@ function RolePage() {
       const { data, error } = await supabase
         .from("okr_versions")
         .select("id,label,is_active,user_id,created_at")
-        .or(`user_id.eq.${userId},user_id.is.null`)   // accepte versions globales (null) ou personnelles
+        .or(`user_id.eq.${userId},user_id.is.null`)
         .order("created_at", { ascending: false });
       if (error) { console.error(error); return; }
       setVersions(data || []);
@@ -3157,7 +3201,7 @@ function RolePage() {
     })();
   }, [userId, selectedComp?.id, versionId]);
 
-  // ----- Données anneau intérieur -----
+  // ----- Données anneau intérieur (plein) -----
   const innerData = CAT_ORDER.map((name) => ({ name, value: 1 }));
 
   const titleRole = selectedRole ? `Role — ${selectedRole}` : "Role";
@@ -3166,7 +3210,6 @@ function RolePage() {
     if (!userId || !selectedComp?.id || !versionId) return;
     setSaving(true);
     try {
-      // upsert sur (user_id, version_id, competency_id)
       const payload = {
         user_id: userId,
         version_id: versionId,
@@ -3225,17 +3268,17 @@ function RolePage() {
           <div style={{ paddingTop: "100%" }} />
           <div className="absolute inset-0">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                {/* Anneau intérieur — PLEIN (pas de trou) */}
+              <PieChart margin={{ top: 6, right: 6, bottom: 6, left: 6 }}>
+                {/* Anneau intérieur — PLEIN, plus petit, avec icônes blanches */}
                 <Pie
                   data={innerData}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius="0%"       // ⬅️ plein
-                  outerRadius="38%"      // cercle central plus grand et plein
+                  innerRadius="0%"        // plein
+                  outerRadius="26%"       // plus petit qu'avant
                   startAngle={90}
                   endAngle={-270}
-                  label={renderCategoryCurvedLabel}
+                  label={renderCategoryIconLabel} // ⬅️ icônes
                   labelLine={false}
                   isAnimationActive={false}
                   stroke="none"
@@ -3245,7 +3288,7 @@ function RolePage() {
                   ))}
                 </Pie>
 
-                {/* Anneau extérieur — agrandi au maximum */}
+                {/* Anneau extérieur — plus grand, marge réduite, police réduite */}
                 {CAT_ORDER.map((cat) => {
                   const list = byCat[cat] || [];
                   if (!list.length) return null;
@@ -3259,7 +3302,6 @@ function RolePage() {
                     shade: 0.55 + (0.45 * (i % 6)) / 5,
                   }));
 
-                  // Label radial responsive (utilise les rayons calculés)
                   const RadialLabel = makeOuterRadialLabelAdvanced(list.length, cat);
 
                   return (
@@ -3268,14 +3310,14 @@ function RolePage() {
                       data={data}
                       dataKey="value"
                       nameKey="name"
-                      innerRadius="48%"   // ⬅️ plus proche du centre
-                      outerRadius="96%"   // ⬅️ au plus près du bord de la carte
+                      innerRadius="30%"   // gap réduit entre anneaux (26% -> 30%)
+                      outerRadius="98%"   // au maximum, près du bord
                       startAngle={start}
                       endAngle={end}
-                      paddingAngle={1}
+                      paddingAngle={0.8}  // un peu plus serré
                       minAngle={2}
                       isAnimationActive={false}
-                      label={RadialLabel}
+                      label={RadialLabel} // police plus petite dans la fonction
                       labelLine={false}
                       onClick={(_, idx) => {
                         const d = data[idx];
