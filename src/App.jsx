@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useContext, createContext } from "react";
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate, useLocation, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   PieChart,
   Pie,
