@@ -784,7 +784,7 @@ function OKR() {
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-slate-600">Year</span>
         <select
-          className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
+          className="border rounded-md p-2 bg-white text-black border-slate-200 focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
           value={versionId}
           onChange={(e) => setVersionId(e.target.value)}
         >
@@ -803,7 +803,7 @@ function OKR() {
       </div>
 
       {/* Category Tabs (avec Global) */}
-      <div className="flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
+      <div className="flex flex-wrap gap-2 bg-slate-100 rounded-full p-1 w-fit">
         {CATS.map((cat) => (
           <button
             key={cat}
@@ -822,32 +822,36 @@ function OKR() {
       {category === "Global" && (
         <>
           {globalPie.length > 0 ? (
-<div
-className="relative bg-white rounded-2xl shadow p-4 md:h-[60vh] min-h-[320px]"
-style={{ height: '48dvh' }} // mobile: hauteur basée sur la "dynamic viewport height" iOS
->
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={globalPie}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={70}
-                    outerRadius={135}
-                    startAngle={90}
-                    endAngle={-270}
-                    label={renderCategoryCurvedLabel}
-                    labelLine={false}
-                    isAnimationActive={false} // ⛔ pas d’animation
-                    onClick={(slice) => slice?.name && goToCat(slice.name)} // clic → onglet catégorie
-                  >
-                    {globalPie.map((entry, i) => (
-                      <Cell key={i} fill={entry.fill} cursor="pointer" />
-                    ))}
-                  </Pie>
-                  {/* ⛔ Pas de Tooltip */}
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="bg-white rounded-2xl shadow p-3 sm:p-4">
+              {/* Wrapper largeur d'abord : prend 100% en mobile, max 720px en desktop */}
+              <div className="relative mx-auto" style={{ width: 'min(100%, 720px)' }}>
+                {/* Carré basé sur la largeur (aucune hauteur fixe) */}
+                <div style={{ paddingTop: '100%' }} />
+                {/* Zone absolue qui remplit ce carré */}
+                <div className="absolute inset-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={globalPie}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={70}
+                        outerRadius={135}
+                        startAngle={90}
+                        endAngle={-270}
+                        label={renderCategoryCurvedLabel}
+                        labelLine={false}
+                        isAnimationActive={false}
+                        onClick={(slice) => slice?.name && goToCat(slice.name)}
+                      >
+                        {globalPie.map((entry, i) => (
+                          <Cell key={i} fill={entry.fill} cursor="pointer" />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-slate-500">No OKR data for this year.</div>
@@ -869,15 +873,13 @@ style={{ height: '48dvh' }} // mobile: hauteur basée sur la "dynamic viewport h
                   key={item.id}
                   className="relative bg-white p-4 rounded-xl shadow space-y-2"
                 >
-                  {/* ❌ Croix rouge sur fond blanc en haut à droite */}
+                  {/* Delete */}
                   <button
                     type="button"
                     onClick={() => deleteItem(item.id)}
                     disabled={!isActiveSelected}
                     title={!isActiveSelected ? "Read-only (inactive year)" : "Delete OKR"}
-                    className={`absolute right-2 top-2 w-7 h-7 rounded-full 
-                                flex items-center justify-center border
-                                bg-white ${isActiveSelected ? "hover:bg-slate-50" : "opacity-50 cursor-not-allowed"}`}
+                    className={`absolute right-2 top-2 w-7 h-7 rounded-full flex items-center justify-center border bg-white ${isActiveSelected ? "hover:bg-slate-50" : "opacity-50 cursor-not-allowed"}`}
                   >
                     <span className="text-red-600 text-lg leading-none">×</span>
                   </button>
@@ -944,28 +946,19 @@ style={{ height: '48dvh' }} // mobile: hauteur basée sur la "dynamic viewport h
         </>
       )}
 
-      {/* MODAL Add OKR (bords fenêtre & input en teal, croix rouge sur fond blanc) */}
+      {/* MODAL Add OKR */}
       {showAdd && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowAdd(false)} />
- <div
-   className="
-     relative bg-white rounded-2xl shadow
-     p-3 sm:p-4
-     mx-auto
-     w-full
-     max-w-[min(100vw-32px,720px)]
-     aspect-square
-   "
- >
-<div className="mb-2">
-  <h3 className="text-lg font-semibold text-[#057e7f]">New OKR — {category}</h3>
-</div>
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-4 border border-slate-200">
+            <div className="mb-2">
+              <h3 className="text-lg font-semibold text-[#057e7f]">New OKR — {category}</h3>
+            </div>
 
             <label className="grid gap-1">
               <span className="text-sm text-slate-600">Description (max 3 lines)</span>
               <textarea
-                textarea className="border border-slate-200 rounded-md p-2 h-24 bg-white text-black focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
+                className="border border-slate-200 rounded-md p-2 h-24 bg-white text-black focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
                 rows={3}
                 value={newOKR}
                 onChange={(e) => {
@@ -975,9 +968,14 @@ style={{ height: '48dvh' }} // mobile: hauteur basée sur la "dynamic viewport h
                 placeholder="Write the OKR text here..."
               />
             </label>
+
             <div className="mt-3 flex items-center justify-end gap-2">
-              <button onClick={() => setShowAdd(false)} className="px-4 py-2 rounded-full bg-white text-[#057e7f] border border-[#057e7f] hover:bg-slate-50">Cancel</button>
-              <button onClick={confirmAddOKR} className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90">Add</button>
+              <button onClick={() => setShowAdd(false)} className="px-4 py-2 rounded-full bg-white text-[#057e7f] border border-[#057e7f] hover:bg-slate-50">
+                Cancel
+              </button>
+              <button onClick={confirmAddOKR} className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90">
+                Add
+              </button>
             </div>
           </div>
         </div>
@@ -985,6 +983,7 @@ style={{ height: '48dvh' }} // mobile: hauteur basée sur la "dynamic viewport h
     </section>
   );
 }
+
 
 
 
