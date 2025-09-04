@@ -2964,8 +2964,7 @@ function RolePage() {
     const x = cx + r * Math.cos(rad);
     const y = cy + r * Math.sin(rad);
 
-    // ↗️ + grand qu'avant : 0.20 au lieu de 0.18
-    const S = Math.max(8, outerRadius * 0.20);
+    const S = Math.max(8, outerRadius * 0.20); // taille icône
 
     const Gear = () => {
       const teeth = Array.from({ length: 6 });
@@ -2995,7 +2994,7 @@ function RolePage() {
       </g>
     );
 
-    // 📈 retournée (miroir horizontal via scale(-1,1))
+    // Business impact retournée (miroir horizontal)
     const ChartUp = () => (
       <g transform={`translate(${x},${y}) scale(-1,1)`} style={{ pointerEvents: "none" }}>
         <path d={`M ${-S * 0.48} ${S * 0.30} L ${-S * 0.48} ${-S * 0.30} L ${S * 0.48} ${-S * 0.30}`} stroke="#fff" strokeWidth={S * 0.08} fill="none" />
@@ -3009,44 +3008,47 @@ function RolePage() {
     return <ChartUp />; // Business impact
   };
 
-  // Split 1→3 lignes
-  function splitLines(label, maxPerLine, maxLines = 3) {
-    const t = (label || "").trim();
-    if (!t) return [""];
-    if (t.length <= maxPerLine) return [t];
-    const words = t.split(/\s+/);
+  // ---------- Wrapping sur 3 lignes avec contraintes d'arc + épaisseur ----------
+  function splitLinesByWidth(text, maxCharsPerLine, maxLines = 3) {
+    const words = (text || "").trim().split(/\s+/);
+    if (!words[0]) return [""];
     const lines = [""];
     let li = 0;
     for (const w of words) {
       const cur = lines[li];
-      const sep = cur.length ? " " : "";
-      if (li < maxLines - 1 && (cur + sep + w).length > maxPerLine) {
+      const sep = cur ? " " : "";
+      if ((cur + sep + w).length > maxCharsPerLine && li < maxLines - 1) {
         li++;
         lines[li] = w;
       } else {
         lines[li] = (cur + sep + w).trim();
       }
-      if (li === maxLines - 1 && lines[li].length > maxPerLine * 1.6) {
-        const cut = lines[li].lastIndexOf(" ", Math.max(0, maxPerLine - 1));
-        lines[li] = (cut > 0 ? lines[li].slice(0, cut) : lines[li].slice(0, maxPerLine - 1)).trim() + "…";
-        break;
-      }
+    }
+    // Si toujours trop long à la dernière ligne → ellipsis
+    if (lines.length === maxLines && lines[maxLines - 1].length > maxCharsPerLine) {
+      const s = lines[maxLines - 1];
+      lines[maxLines - 1] = (s.slice(0, Math.max(0, maxCharsPerLine - 1)) + "…").trim();
     }
     return lines;
   }
 
-  // Label radial externe (jusqu'à 3 lignes) — police encore réduite + renvoi à la ligne
+  // Label radial externe (jusqu'à 3 lignes), dimensionné pour "tenir" dans sa part
   const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
     const { cx, cy, midAngle, name, index, innerRadius, outerRadius } = props;
 
-    const padding = Math.max(5, Math.round(outerRadius * 0.025)); // marge encore un peu plus fine
-    const startR = innerRadius + padding;
-    const endR   = outerRadius - padding;
-    const rMid   = (startR + endR) / 2;
+    // --- Géométrie dispo ---
+    const anglePerSlice = total > 0 ? 120 / total : 0;          // degrés par slice dans la catégorie
+    const anglePadding = 4;                                     // marge angulaire (deg) de chaque côté
+    const effectiveDeg = Math.max(0, anglePerSlice - anglePadding * 2);
+    const effectiveRad = (effectiveDeg * Math.PI) / 180;
 
-    const arcDegPerSlice = total > 0 ? (120 / total) : 0;
-    if (arcDegPerSlice < 2.5) return null; // autorise encore plus de labels
+    const paddingR = Math.max(5, Math.round(outerRadius * 0.025)); // marge radiale
+    const startR = innerRadius + paddingR;
+    const endR   = outerRadius - paddingR;
+    const thickness = Math.max(8, endR - startR);
+    const rMid = (startR + endR) / 2;
 
+    // --- Position du label (au milieu du secteur) ---
     let flip = false;
     if (category === "Business impact") flip = true;
     else if (category === "Technical" && index >= Math.ceil(total / 2)) flip = true;
@@ -3056,15 +3058,33 @@ function RolePage() {
     const x0 = cx + rMid * Math.cos(ang);
     const y0 = cy + rMid * Math.sin(ang);
 
-    const available = endR - startR;
-    const charsPerLine = Math.max(6, Math.floor(available / 7));
-    const lines = splitLines(name, charsPerLine, 3); // ⇐ jusqu’à 3 lignes
+    // --- Calcul de la taille de police & du wrap pour ne pas dépasser ---
+    // largeur arc disponible au rayon rMid
+    const availableArc = rMid * effectiveRad;                 // en px
+    let fontSize = Math.max(8, Math.round(outerRadius * 0.07)); // base
+    const charW = fontSize * 0.58;                            // approx largeur moyenne
+    let maxCharsPerLine = Math.max(5, Math.floor((availableArc * 0.92) / charW));
 
-    const dySets = { 1: ["0"], 2: ["-0.55em", "1.1em"], 3: ["-1.05em", "0", "1.05em"] };
-    const dyVals = dySets[Math.min(3, lines.length)] || ["0"];
+    // force jusqu’à 3 lignes si nécessaire
+    let lines = splitLinesByWidth(name, maxCharsPerLine, 3);
 
-    // ↘️ police plus petite qu'avant
-    const fontSize = Math.max(8, Math.round(outerRadius * 0.072));
+    // Ajuste la police pour tenir en hauteur (épaisseur anneau)
+    const lineHeight = fontSize * 1.05;
+    let totalHeight = lineHeight * lines.length;
+    if (totalHeight > thickness * 0.9) {
+      const scale = (thickness * 0.9) / totalHeight;
+      fontSize = Math.max(8, Math.floor(fontSize * scale));
+      // recalculs après réduction
+      const charW2 = fontSize * 0.58;
+      maxCharsPerLine = Math.max(5, Math.floor((availableArc * 0.92) / charW2));
+      lines = splitLinesByWidth(name, maxCharsPerLine, 3);
+      // hauteur finale
+      totalHeight = fontSize * 1.05 * lines.length;
+    }
+
+    // décalages verticaux (centrage) en px
+    const dyPx = fontSize * 1.05;
+    const startDy = -((lines.length - 1) / 2) * dyPx;
 
     return (
       <text
@@ -3075,11 +3095,11 @@ function RolePage() {
         fontSize={fontSize}
         fontWeight="600"
         textAnchor="middle"
-        dominantBaseline="middle"
+        dominantBaseline="central"
         pointerEvents="none"
       >
         {lines.map((line, i) => (
-          <tspan key={i} x={x0} dy={i === 0 ? dyVals[0] : dyVals[i]}>
+          <tspan key={i} x={x0} dy={i === 0 ? `${startDy}px` : `${dyPx}px`}>
             {line}
           </tspan>
         ))}
@@ -3214,7 +3234,9 @@ function RolePage() {
         </div>
       </div>
 
-      <p className="text-slate-700">{definition ? definition : "No definition for this role."}</p>
+      <p className="text-slate-700">
+        {definition ? definition : "No definition for this role."}
+      </p>
 
       {/* Pie chart — responsive plein écran */}
       <div className="role-chart bg-white rounded-2xl shadow p-4">
@@ -3243,7 +3265,7 @@ function RolePage() {
                   ))}
                 </Pie>
 
-                {/* Anneau extérieur — plus grand, police réduite, multi-lignes */}
+                {/* Anneau extérieur — wrap contrôlé dans sa part */}
                 {CAT_ORDER.map((cat) => {
                   const list = byCat[cat] || [];
                   if (!list.length) return null;
@@ -3346,6 +3368,7 @@ function RolePage() {
     </section>
   );
 }
+
 
 
 
