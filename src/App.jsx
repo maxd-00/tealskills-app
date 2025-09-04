@@ -274,12 +274,13 @@ function Shell({ children }) {
         </div>
       )}
 
-      <main
-        className={`
-          max-w-6xl mx-auto px-3 sm:px-4 pb-10
-          ${isLogin ? "" : "pt-14 md:pt-16"}
-        `}
-      >
+<main
+className={`
+max-w-6xl mx-auto px-3 sm:px-4
+${isLogin ? "" : "pt-14 md:pt-16"}
+`}
+style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
+>
         {children}
       </main>
     </div>
@@ -821,7 +822,10 @@ function OKR() {
       {category === "Global" && (
         <>
           {globalPie.length > 0 ? (
-<div className="relative bg-white rounded-2xl shadow p-4 h-[55vh] md:h-[60vh] min-h-[360px]">
+<div
+className="relative bg-white rounded-2xl shadow p-4 md:h-[60vh] min-h-[320px]"
+style={{ height: '48dvh' }} // mobile: hauteur basée sur la "dynamic viewport height" iOS
+>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -962,7 +966,7 @@ function OKR() {
                 placeholder="Write the OKR text here..."
               />
             </label>
-            <div className="mt-4 flex items-center justify-end gap-2">
+            <div className="mt-3 flex items-center justify-end gap-2">
               <button onClick={() => setShowAdd(false)} className="px-4 py-2 rounded-full bg-white text-[#057e7f] border border-[#057e7f] hover:bg-slate-50">Cancel</button>
               <button onClick={confirmAddOKR} className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90">Add</button>
             </div>
