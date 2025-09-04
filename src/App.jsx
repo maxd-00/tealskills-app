@@ -3337,7 +3337,7 @@ export default function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/okr?view=global" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
+              <Route path="/okr" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
               <Route path="/okr/:category" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
               <Route path="/global" element={<ProtectedRoute><Global /></ProtectedRoute>} />
               <Route path="/role" element={<ProtectedRoute><RolePage /></ProtectedRoute>} />
