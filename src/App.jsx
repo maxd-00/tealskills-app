@@ -142,7 +142,44 @@ const ROLES_CATEGORY_INDEX = Object.fromEntries(
 
 function Shell({ children }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { session } = useAuth();
+
+  // Cacher la navbar sur /login
   const isLogin = location.pathname === "/login";
+
+  // Détecter si l'utilisateur est admin (lecture du profil)
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!session?.user?.id) {
+        if (!cancelled) setIsAdmin(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+      if (!cancelled) setIsAdmin(!error && data?.role === "admin");
+    })();
+    return () => { cancelled = true; };
+  }, [session?.user?.id]);
+
+  // Logout standard
+  const logout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login", { replace: true });
+  };
+
+  // Style des liens de la navbar (actif/inactif)
+  const navLinkClass = ({ isActive }) =>
+    `px-3 py-1.5 rounded-md text-sm ${
+      isActive
+        ? "bg-[#057e7f] text-white"
+        : "text-slate-700 hover:bg-slate-100"
+    }`;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -156,8 +193,37 @@ function Shell({ children }) {
             paddingTop: "env(safe-area-inset-top)",
           }}
         >
-          {/* ⬇️ Garde ICI tout ton contenu de navbar existant (logo, liens, etc.) ⬇️ */}
-          {/* ... */}
+          <div className="flex items-center justify-between h-full px-4">
+            {/* Gauche : logo + liens */}
+            <div className="flex items-center space-x-4">
+              <NavLink to="/" className="text-lg font-bold text-[#057e7f]">
+                TealSkills
+              </NavLink>
+              <NavLink className={navLinkClass} to="/okr">OKR</NavLink>
+              <NavLink className={navLinkClass} to="/role">Role</NavLink>
+              <NavLink className={navLinkClass} to="/global">Global</NavLink>
+              {isAdmin && (
+                <NavLink className={navLinkClass} to="/admin">
+                  Admin
+                </NavLink>
+              )}
+            </div>
+
+            {/* Droite : email + logout */}
+            <div className="flex items-center space-x-2">
+              {session?.user?.email && (
+                <span className="text-sm text-slate-600">
+                  {session.user.email}
+                </span>
+              )}
+              <button
+                onClick={logout}
+                className="text-sm px-3 py-1.5 rounded-md bg-[#057e7f] text-white hover:opacity-90"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -168,12 +234,12 @@ function Shell({ children }) {
           paddingTop: isLogin ? 0 : "calc(64px + env(safe-area-inset-top))",
         }}
       >
-        {/* ⚠️ Si ton Shell utilise <Outlet />, remplace {children} par <Outlet /> */}
         {children}
       </main>
     </div>
   );
 }
+
 
 
 
