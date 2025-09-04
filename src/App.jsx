@@ -821,7 +821,7 @@ function OKR() {
       {category === "Global" && (
         <>
           {globalPie.length > 0 ? (
-            <div className="relative bg-white rounded-2xl shadow p-4 h-[420px]">
+<div className="relative bg-white rounded-2xl shadow p-4 h-[55vh] md:h-[60vh] min-h-[360px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -905,7 +905,7 @@ function OKR() {
 
                   {/* Notes */}
                   <textarea
-                    className={`border rounded-md p-2 w-full ${isActiveSelected ? "bg-white" : "bg-slate-50"} text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f] ${!isActiveSelected ? "opacity-70" : ""}`}
+                    className={`border rounded-md p-2 w-full ${isActiveSelected ? "bg-white" : "bg-slate-50"} text-black border-slate-200 focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f] ${!isActiveSelected ? "opacity-70" : ""}`}
                     rows={2}
                     placeholder="Add your notes..."
                     value={answers[item.id]?.notes || ""}
@@ -944,7 +944,7 @@ function OKR() {
       {showAdd && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowAdd(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-4 border-2 border-[#057e7f]">
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-4 border border-slate-200">
 <div className="mb-2">
   <h3 className="text-lg font-semibold text-[#057e7f]">New OKR — {category}</h3>
 </div>
@@ -952,7 +952,7 @@ function OKR() {
             <label className="grid gap-1">
               <span className="text-sm text-slate-600">Description (max 3 lines)</span>
               <textarea
-                className="border border-[#057e7f] rounded-md p-2 h-24 bg-white text-black focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
+                textarea className="border border-slate-200 rounded-md p-2 h-24 bg-white text-black focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
                 rows={3}
                 value={newOKR}
                 onChange={(e) => {
