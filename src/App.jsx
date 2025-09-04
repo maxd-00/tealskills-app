@@ -19,6 +19,7 @@ import {
 
 import { useParams } from "react-router-dom";
 import { supabase } from "./supabaseClient";
+import { LogOut, Settings } from "lucide-react";
 
 
 
@@ -137,10 +138,9 @@ function Shell({ children }) {
   const navigate = useNavigate();
   const { session } = useAuth();
 
-  // Cacher la navbar sur /login
   const isLogin = location.pathname === "/login";
 
-  // Rôle admin
+  // Vérifier si admin
   const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -156,16 +156,16 @@ function Shell({ children }) {
         .single();
       if (!cancelled) setIsAdmin(!error && data?.role === "admin");
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [session?.user?.id]);
 
-  // Logout
   const logout = async () => {
     await supabase.auth.signOut();
     navigate("/login", { replace: true });
   };
 
-  // Liens NAV — responsive padding & font
   const navLinkClass = ({ isActive }) =>
     `rounded-md transition-colors
      px-2 py-1 text-[13px]
@@ -175,7 +175,6 @@ function Shell({ children }) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      {/* NAVBAR : cachée sur /login */}
       {!isLogin && (
         <div
           id="app-navbar"
@@ -183,7 +182,7 @@ function Shell({ children }) {
             fixed top-0 left-0 right-0 z-[9999]
             border-b border-slate-200 bg-white
             pt-[env(safe-area-inset-top)]
-            h-14 md:h-16 lg:h-20
+            h-14 md:h-16
           "
         >
           <div className="flex items-center justify-between h-full px-3 sm:px-4">
@@ -195,39 +194,43 @@ function Shell({ children }) {
               >
                 TealSkills
               </NavLink>
-              <NavLink className={navLinkClass} to="/okr">OKR</NavLink>
-              <NavLink className={navLinkClass} to="/role">Role</NavLink>
-              <NavLink className={navLinkClass} to="/global">Global</NavLink>
+              <NavLink className={navLinkClass} to="/okr">
+                OKR
+              </NavLink>
+              <NavLink className={navLinkClass} to="/role">
+                Role
+              </NavLink>
+              <NavLink className={navLinkClass} to="/global">
+                Global
+              </NavLink>
               {isAdmin && (
-                <NavLink className={navLinkClass} to="/admin">
-                  Admin
+                <NavLink
+                  to="/admin"
+                  className="p-2 rounded-md text-slate-700 hover:bg-slate-100"
+                >
+                  <Settings className="w-5 h-5" />
                 </NavLink>
               )}
             </div>
 
-            {/* Droite : uniquement le bouton Logout (email masqué) */}
+            {/* Droite : icône logout */}
             <div className="flex items-center">
               <button
                 onClick={logout}
-                className="
-                  rounded-md bg-[#057e7f] text-white hover:opacity-90
-                  text-[13px] px-2.5 py-1
-                  sm:text-sm sm:px-3 sm:py-1.5
-                  md:text-base md:px-3 md:py-2
-                "
+                className="p-2 rounded-md text-slate-700 hover:bg-slate-100"
+                aria-label="Logout"
               >
-                Logout
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Contenu : padding-top responsive qui suit la hauteur de la navbar */}
       <main
         className={`
           max-w-6xl mx-auto px-3 sm:px-4 pb-10
-          ${isLogin ? "" : "pt-14 md:pt-16 lg:pt-20"}
+          ${isLogin ? "" : "pt-14 md:pt-16"}
         `}
       >
         {children}
