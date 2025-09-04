@@ -133,6 +133,11 @@ const ROLES_CATEGORY_INDEX = Object.fromEntries(
   ROLES_CATEGORIES_NEW.map((c, i) => [c, i])
 );
 
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthCtx";
+import { supabase } from "@/lib/supabaseClient";
+
 function Shell({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -166,12 +171,13 @@ function Shell({ children }) {
     navigate("/login", { replace: true });
   };
 
+  // Style des liens NAV : texte teal + hover clair
   const navLinkClass = ({ isActive }) =>
     `rounded-md transition-colors
-     px-2 py-1 text-[13px]
-     sm:px-3 sm:py-1.5 sm:text-sm
-     md:px-3 md:py-2 md:text-base
-     ${isActive ? "bg-[#057e7f] text-white" : "text-slate-700 hover:bg-slate-100"}`;
+     px-2 py-1 text-sm font-medium
+     ${isActive
+        ? "bg-[#057e7f] text-white"
+        : "text-[#057e7f] hover:bg-[#057e7f]/10"}`;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -187,7 +193,7 @@ function Shell({ children }) {
         >
           <div className="flex items-center justify-between h-full px-3 sm:px-4">
             {/* Gauche : logo + liens */}
-            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+            <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
               <NavLink
                 to="/"
                 className="font-bold text-[#057e7f] text-base sm:text-lg md:text-xl"
@@ -206,9 +212,17 @@ function Shell({ children }) {
               {isAdmin && (
                 <NavLink
                   to="/admin"
-                  className="p-2 rounded-md text-slate-700 hover:bg-slate-100"
+                  className="p-2 rounded-md text-[#057e7f] hover:bg-[#057e7f]/10"
+                  aria-label="Admin"
                 >
-                  <Settings className="w-5 h-5" />
+                  {/* Icône engrenage */}
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" strokeWidth="2"
+                       className="w-5 h-5">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09c.7 0 1.31-.4 1.51-1a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06c.46.46 1.12.6 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09c0 .7.4 1.31 1 1.51a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09c.2.61.81 1.01 1.51 1.01H21a2 2 0 0 1 0 4h-.09c-.7 0-1.31.4-1.51 1z" />
+                  </svg>
                 </NavLink>
               )}
             </div>
@@ -217,10 +231,17 @@ function Shell({ children }) {
             <div className="flex items-center">
               <button
                 onClick={logout}
-                className="p-2 rounded-md text-slate-700 hover:bg-slate-100"
+                className="p-2 rounded-md text-[#057e7f] hover:bg-[#057e7f]/10"
                 aria-label="Logout"
               >
-                <LogOut className="w-5 h-5" />
+                {/* Icône porte */}
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" strokeWidth="2"
+                     className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                </svg>
               </button>
             </div>
           </div>
@@ -238,6 +259,7 @@ function Shell({ children }) {
     </div>
   );
 }
+
 
 
 
