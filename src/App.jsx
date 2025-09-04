@@ -2956,7 +2956,7 @@ function RolePage() {
     return { start, end };
   };
 
-  // ==== Icônes blanches au centre (dessin relatif → visibles) ====
+  // ==== Icônes blanches au centre (légèrement agrandies) ====
   const renderCategoryIconLabel = (props) => {
     const { cx, cy, innerRadius, outerRadius, midAngle, name } = props;
     const r = (innerRadius + outerRadius) / 2;
@@ -2964,8 +2964,8 @@ function RolePage() {
     const x = cx + r * Math.cos(rad);
     const y = cy + r * Math.sin(rad);
 
-    // Icône un peu plus petite pour éviter tout clipping
-    const S = Math.max(8, outerRadius * 0.18);
+    // ↗️ + grand qu'avant : 0.20 au lieu de 0.18
+    const S = Math.max(8, outerRadius * 0.20);
 
     const Gear = () => {
       const teeth = Array.from({ length: 6 });
@@ -2995,8 +2995,9 @@ function RolePage() {
       </g>
     );
 
+    // 📈 retournée (miroir horizontal via scale(-1,1))
     const ChartUp = () => (
-      <g transform={`translate(${x},${y})`} style={{ pointerEvents: "none" }}>
+      <g transform={`translate(${x},${y}) scale(-1,1)`} style={{ pointerEvents: "none" }}>
         <path d={`M ${-S * 0.48} ${S * 0.30} L ${-S * 0.48} ${-S * 0.30} L ${S * 0.48} ${-S * 0.30}`} stroke="#fff" strokeWidth={S * 0.08} fill="none" />
         <path d={`M ${-S * 0.40} ${S * 0.15} L ${-S * 0.15} ${-S * 0.10} L ${S * 0.05} ${-S * 0.02} L ${S * 0.35} ${-S * 0.26}`} stroke="#fff" strokeWidth={S * 0.10} fill="none" />
         <path d={`M ${S * 0.35} ${-S * 0.26} L ${S * 0.20} ${-S * 0.38} L ${S * 0.48} ${-S * 0.40} Z`} fill="#fff" />
@@ -3034,17 +3035,17 @@ function RolePage() {
     return lines;
   }
 
-  // Label radial (jusqu'à 3 lignes) — police un peu plus petite
+  // Label radial externe (jusqu'à 3 lignes) — police encore réduite + renvoi à la ligne
   const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
     const { cx, cy, midAngle, name, index, innerRadius, outerRadius } = props;
 
-    const padding = Math.max(6, Math.round(outerRadius * 0.03)); // marge fine
+    const padding = Math.max(5, Math.round(outerRadius * 0.025)); // marge encore un peu plus fine
     const startR = innerRadius + padding;
     const endR   = outerRadius - padding;
     const rMid   = (startR + endR) / 2;
 
     const arcDegPerSlice = total > 0 ? (120 / total) : 0;
-    if (arcDegPerSlice < 3) return null; // autorise plus de labels
+    if (arcDegPerSlice < 2.5) return null; // autorise encore plus de labels
 
     let flip = false;
     if (category === "Business impact") flip = true;
@@ -3059,11 +3060,11 @@ function RolePage() {
     const charsPerLine = Math.max(6, Math.floor(available / 7));
     const lines = splitLines(name, charsPerLine, 3); // ⇐ jusqu’à 3 lignes
 
-    const dySets = { 1: ["0"], 2: ["-0.6em", "1.2em"], 3: ["-1.1em", "0", "1.1em"] };
+    const dySets = { 1: ["0"], 2: ["-0.55em", "1.1em"], 3: ["-1.05em", "0", "1.05em"] };
     const dyVals = dySets[Math.min(3, lines.length)] || ["0"];
 
-    // Police réduite encore un peu
-    const fontSize = Math.max(9, Math.round(outerRadius * 0.08));
+    // ↘️ police plus petite qu'avant
+    const fontSize = Math.max(8, Math.round(outerRadius * 0.072));
 
     return (
       <text
@@ -3090,7 +3091,6 @@ function RolePage() {
   useEffect(() => {
     if (!userId) return;
     (async () => {
-      // Rôles + job_role_id de l'utilisateur
       const [{ data: defs }, { data: prof }] = await Promise.all([
         supabase.from("roles_definitions").select("id, role, definition").order("role", { ascending: true }),
         supabase.from("profiles").select("job_role_id").eq("id", userId).single(),
@@ -3109,14 +3109,13 @@ function RolePage() {
     })();
   }, [userId]);
 
-  // Versions (comme OKR). Si tu as rendu les versions « par utilisateur », on filtre par user_id = current user.
   useEffect(() => {
     if (!userId) return;
     (async () => {
       const { data, error } = await supabase
         .from("okr_versions")
         .select("id,label,is_active,user_id,created_at")
-        .or(`user_id.eq.${userId},user_id.is.null`)   // versions globales (null) ou personnelles
+        .or(`user_id.eq.${userId},user_id.is.null`)
         .order("created_at", { ascending: false });
       if (error) { console.error(error); return; }
       setVersions(data || []);
@@ -3125,7 +3124,6 @@ function RolePage() {
     })();
   }, [userId]);
 
-  // Charger compétences du rôle sélectionné
   useEffect(() => {
     if (!selectedRole) {
       setByCat({ Behavioral: [], Technical: [], "Business impact": [] });
@@ -3137,20 +3135,12 @@ function RolePage() {
         .from("roles_competencies")
         .select("id, category, competency, description")
         .eq("role", selectedRole);
-      if (error) {
-        console.error(error);
-        setByCat({ Behavioral: [], Technical: [], "Business impact": [] });
-        return;
-      }
+      if (error) { console.error(error); setByCat({ Behavioral: [], Technical: [], "Business impact": [] }); return; }
       const map = { Behavioral: [], Technical: [], "Business impact": [] };
       (data || []).forEach(row => {
         const newCat = ROLES_LEGACY_TO_NEW[row.category] || row.category;
         if (map[newCat]) {
-          map[newCat].push({
-            id: row.id,
-            competency: row.competency,
-            description: row.description || "",
-          });
+          map[newCat].push({ id: row.id, competency: row.competency, description: row.description || "" });
         }
       });
       setByCat(map);
@@ -3162,7 +3152,6 @@ function RolePage() {
     })();
   }, [selectedRole, roles]);
 
-  // Charger le commentaire quand (compétence, version) changent
   useEffect(() => {
     if (!userId || !selectedComp?.id || !versionId) return;
     (async () => {
@@ -3179,21 +3168,14 @@ function RolePage() {
     })();
   }, [userId, selectedComp?.id, versionId]);
 
-  // ----- Données anneau intérieur (plein) -----
   const innerData = CAT_ORDER.map((name) => ({ name, value: 1 }));
-
   const titleRole = selectedRole ? `Role — ${selectedRole}` : "Role";
 
   async function saveComment() {
     if (!userId || !selectedComp?.id || !versionId) return;
     setSaving(true);
     try {
-      const payload = {
-        user_id: userId,
-        version_id: versionId,
-        competency_id: selectedComp.id,
-        comment: comment || null,
-      };
+      const payload = { user_id: userId, version_id: versionId, competency_id: selectedComp.id, comment: comment || null };
       const { data, error } = await supabase
         .from("roles_competency_comments")
         .upsert(payload, { onConflict: "user_id,version_id,competency_id" })
@@ -3210,7 +3192,6 @@ function RolePage() {
 
   return (
     <section className="space-y-5">
-      {/* Titre + dropdown rôle */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-[#057e7f]">{titleRole}</h1>
         <div className="flex items-center gap-2">
@@ -3233,21 +3214,17 @@ function RolePage() {
         </div>
       </div>
 
-      {/* Description du rôle */}
-      <p className="text-slate-700">
-        {definition ? definition : "No definition for this role."}
-      </p>
+      <p className="text-slate-700">{definition ? definition : "No definition for this role."}</p>
 
       {/* Pie chart — responsive plein écran */}
       <div className="role-chart bg-white rounded-2xl shadow p-4">
         <style>{`.role-chart .recharts-tooltip-wrapper{display:none!important;}`}</style>
-        {/* Wrapper responsive carré (basé sur la largeur) */}
         <div className="relative w-full">
           <div style={{ paddingTop: "100%" }} />
           <div className="absolute inset-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart margin={{ top: 6, right: 6, bottom: 6, left: 6 }}>
-                {/* Anneau intérieur — PLEIN, plus petit, avec icônes blanches */}
+                {/* Anneau intérieur — plein + icônes */}
                 <Pie
                   data={innerData}
                   dataKey="value"
@@ -3266,7 +3243,7 @@ function RolePage() {
                   ))}
                 </Pie>
 
-                {/* Anneau extérieur — plus grand, marge réduite, police réduite */}
+                {/* Anneau extérieur — plus grand, police réduite, multi-lignes */}
                 {CAT_ORDER.map((cat) => {
                   const list = byCat[cat] || [];
                   if (!list.length) return null;
@@ -3319,7 +3296,6 @@ function RolePage() {
         </div>
       </div>
 
-      {/* Panneau: compétence sélectionnée + commentaire par version */}
       {selectedComp && (
         <div className="bg-white rounded-2xl shadow p-4 grid gap-3">
           <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -3327,8 +3303,6 @@ function RolePage() {
               <div className="text-sm text-slate-500">{selectedComp.category}</div>
               <h3 className="text-lg font-semibold text-[#057e7f]">{selectedComp.title}</h3>
             </div>
-
-            {/* Dropdown Version (comme OKR) */}
             <label className="grid gap-1">
               <span className="text-sm text-slate-600">Version</span>
               <select
@@ -3349,7 +3323,6 @@ function RolePage() {
             {selectedComp.description || "No description."}
           </p>
 
-          {/* Commentaire utilisateur, lié à (user, version, compétence) */}
           <div className="grid gap-2">
             <textarea
               rows={4}
@@ -3373,6 +3346,7 @@ function RolePage() {
     </section>
   );
 }
+
 
 
 
