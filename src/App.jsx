@@ -2956,72 +2956,50 @@ function RolePage() {
     return { start, end };
   };
 
-  // ==== NOUVEAU : icônes blanches au centre à la place des titres ====
+  // ==== Icônes blanches au centre (dessin relatif → visibles) ====
   const renderCategoryIconLabel = (props) => {
     const { cx, cy, innerRadius, outerRadius, midAngle, name } = props;
-    // position au milieu de l’anneau central
     const r = (innerRadius + outerRadius) / 2;
     const rad = (-midAngle * Math.PI) / 180;
     const x = cx + r * Math.cos(rad);
     const y = cy + r * Math.sin(rad);
 
-    // taille de l’icône proportionnelle à l’anneau central
-    const S = Math.max(10, outerRadius * 0.22); // échelle icône
+    // Icône un peu plus petite pour éviter tout clipping
+    const S = Math.max(8, outerRadius * 0.18);
 
     const Gear = () => {
-      // petit "cog" simplifié
       const teeth = Array.from({ length: 6 });
       return (
         <g transform={`translate(${x},${y})`} style={{ pointerEvents: "none" }}>
-          {/* dents */}
-          {teeth.map((_, i) => {
-            const a = (i * Math.PI * 2) / teeth.length;
-            const tx = Math.cos(a) * (S * 0.55);
-            const ty = Math.sin(a) * (S * 0.55);
-            const rdeg = (a * 180) / Math.PI;
-            return (
-              <rect
-                key={i}
-                x={-S * 0.08}
-                y={-S * 0.3}
-                width={S * 0.16}
-                height={S * 0.25}
-                fill="#fff"
-                transform={`translate(${x + tx - x},${y + ty - y}) rotate(${rdeg})`}
-              />
-            );
-          })}
-          {/* corps */}
-          <circle cx={x} cy={y} r={S * 0.38} fill="#fff" />
-          <circle cx={x} cy={y} r={S * 0.18} fill={CAT_COLOR.Technical} />
+          {teeth.map((_, i) => (
+            <rect
+              key={i}
+              x={-S * 0.08}
+              y={-S * 0.46}
+              width={S * 0.16}
+              height={S * 0.22}
+              fill="#fff"
+              transform={`rotate(${(i * 360) / teeth.length})`}
+            />
+          ))}
+          <circle cx={0} cy={0} r={S * 0.38} fill="#fff" />
+          <circle cx={0} cy={0} r={S * 0.18} fill={CAT_COLOR.Technical} />
         </g>
       );
     };
 
     const Person = () => (
       <g transform={`translate(${x},${y})`} style={{ pointerEvents: "none" }}>
-        {/* tête */}
-        <circle cx={x} cy={y - S * 0.18} r={S * 0.18} fill="#fff" />
-        {/* buste */}
-        <rect
-          x={x - S * 0.35}
-          y={y - S * 0.02}
-          width={S * 0.7}
-          height={S * 0.44}
-          rx={S * 0.12}
-          fill="#fff"
-        />
+        <circle cx={0} cy={-S * 0.18} r={S * 0.18} fill="#fff" />
+        <rect x={-S * 0.35} y={-S * 0.02} width={S * 0.7} height={S * 0.44} rx={S * 0.12} fill="#fff" />
       </g>
     );
 
     const ChartUp = () => (
       <g transform={`translate(${x},${y})`} style={{ pointerEvents: "none" }}>
-        {/* axe */}
-        <path d={`M ${x - S * 0.48} ${y + S * 0.30} L ${x - S * 0.48} ${y - S * 0.30} L ${x + S * 0.48} ${y - S * 0.30}`} stroke="#fff" strokeWidth={S * 0.08} fill="none" />
-        {/* ligne */}
-        <path d={`M ${x - S * 0.40} ${y + S * 0.15} L ${x - S * 0.15} ${y - S * 0.10} L ${x + S * 0.05} ${y - S * 0.02} L ${x + S * 0.35} ${y - S * 0.26}`} stroke="#fff" strokeWidth={S * 0.10} fill="none" />
-        {/* flèche */}
-        <path d={`M ${x + S * 0.35} ${y - S * 0.26} L ${x + S * 0.20} ${y - S * 0.38} L ${x + S * 0.48} ${y - S * 0.40} Z`} fill="#fff" />
+        <path d={`M ${-S * 0.48} ${S * 0.30} L ${-S * 0.48} ${-S * 0.30} L ${S * 0.48} ${-S * 0.30}`} stroke="#fff" strokeWidth={S * 0.08} fill="none" />
+        <path d={`M ${-S * 0.40} ${S * 0.15} L ${-S * 0.15} ${-S * 0.10} L ${S * 0.05} ${-S * 0.02} L ${S * 0.35} ${-S * 0.26}`} stroke="#fff" strokeWidth={S * 0.10} fill="none" />
+        <path d={`M ${S * 0.35} ${-S * 0.26} L ${S * 0.20} ${-S * 0.38} L ${S * 0.48} ${-S * 0.40} Z`} fill="#fff" />
       </g>
     );
 
@@ -3056,17 +3034,17 @@ function RolePage() {
     return lines;
   }
 
-  // Label radial (jusqu'à 3 lignes) — responsive, police + petite
+  // Label radial (jusqu'à 3 lignes) — police un peu plus petite
   const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
     const { cx, cy, midAngle, name, index, innerRadius, outerRadius } = props;
 
-    const padding = Math.max(6, Math.round(outerRadius * 0.03)); // marge plus fine
+    const padding = Math.max(6, Math.round(outerRadius * 0.03)); // marge fine
     const startR = innerRadius + padding;
     const endR   = outerRadius - padding;
     const rMid   = (startR + endR) / 2;
 
     const arcDegPerSlice = total > 0 ? (120 / total) : 0;
-    if (arcDegPerSlice < 4) return null;
+    if (arcDegPerSlice < 3) return null; // autorise plus de labels
 
     let flip = false;
     if (category === "Business impact") flip = true;
@@ -3079,13 +3057,13 @@ function RolePage() {
 
     const available = endR - startR;
     const charsPerLine = Math.max(6, Math.floor(available / 7));
-    const lines = splitLines(name, charsPerLine, 3);
+    const lines = splitLines(name, charsPerLine, 3); // ⇐ jusqu’à 3 lignes
 
-    const dySets = { 1: ["0"], 2: ["-0.6em", "1.2em"], 3: ["-1.2em", "0", "1.2em"] };
+    const dySets = { 1: ["0"], 2: ["-0.6em", "1.2em"], 3: ["-1.1em", "0", "1.1em"] };
     const dyVals = dySets[Math.min(3, lines.length)] || ["0"];
 
-    // Police réduite pour gagner de la place
-    const fontSize = Math.max(10, Math.round(outerRadius * 0.09));
+    // Police réduite encore un peu
+    const fontSize = Math.max(9, Math.round(outerRadius * 0.08));
 
     return (
       <text
@@ -3138,7 +3116,7 @@ function RolePage() {
       const { data, error } = await supabase
         .from("okr_versions")
         .select("id,label,is_active,user_id,created_at")
-        .or(`user_id.eq.${userId},user_id.is.null`)
+        .or(`user_id.eq.${userId},user_id.is.null`)   // versions globales (null) ou personnelles
         .order("created_at", { ascending: false });
       if (error) { console.error(error); return; }
       setVersions(data || []);
@@ -3274,11 +3252,11 @@ function RolePage() {
                   data={innerData}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius="0%"        // plein
-                  outerRadius="26%"       // plus petit qu'avant
+                  innerRadius="0%"
+                  outerRadius="26%"
                   startAngle={90}
                   endAngle={-270}
-                  label={renderCategoryIconLabel} // ⬅️ icônes
+                  label={renderCategoryIconLabel}
                   labelLine={false}
                   isAnimationActive={false}
                   stroke="none"
@@ -3310,14 +3288,14 @@ function RolePage() {
                       data={data}
                       dataKey="value"
                       nameKey="name"
-                      innerRadius="30%"   // gap réduit entre anneaux (26% -> 30%)
-                      outerRadius="98%"   // au maximum, près du bord
+                      innerRadius="30%"
+                      outerRadius="98%"
                       startAngle={start}
                       endAngle={end}
-                      paddingAngle={0.8}  // un peu plus serré
+                      paddingAngle={0.8}
                       minAngle={2}
                       isAnimationActive={false}
-                      label={RadialLabel} // police plus petite dans la fonction
+                      label={RadialLabel}
                       labelLine={false}
                       onClick={(_, idx) => {
                         const d = data[idx];
@@ -3395,6 +3373,7 @@ function RolePage() {
     </section>
   );
 }
+
 
 
 
