@@ -139,6 +139,8 @@ function Shell({ children }) {
   const { session } = useAuth();
 
   const isLogin = location.pathname === "/login";
+  const isOKR = location.pathname.startsWith("/okr");
+
 
   // Vérifier si admin
   const [isAdmin, setIsAdmin] = useState(false);
@@ -275,14 +277,16 @@ function Shell({ children }) {
       )}
 
 <main
-className={`
-max-w-6xl mx-auto px-3 sm:px-4
-${isLogin ? "" : "pt-14 md:pt-16"}
-`}
-style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
+  className={`
+    pb-10
+    ${isLogin ? "" : "pt-14 md:pt-16"}
+    ${isOKR ? "max-w-none px-0" : "max-w-6xl mx-auto px-3 sm:px-4"}
+  `}
+  style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
 >
-        {children}
-      </main>
+  {children}
+</main>
+
     </div>
   );
 }
@@ -747,7 +751,8 @@ function OKR() {
   }, [searchParams, setSearchParams]);
 
   return (
-    <section className="space-y-6">
+    <section className="w-screen px-3 sm:px-4 space-y-6">
+
       <h1 className="text-2xl font-bold text-[#057e7f]">My OKRs</h1>
 
       {/* Year */}
@@ -790,33 +795,36 @@ function OKR() {
       {/* GLOBAL */}
       {category === "Global" && (
         globalPie.length > 0 ? (
-          <div className="bg-white rounded-2xl shadow p-3 sm:p-4">
-            <div className="relative mx-auto" style={{ width: 'min(100%, 720px)' }}>
-              <div style={{ paddingTop: '100%' }} />
-              <div className="absolute inset-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={globalPie}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={70}
-                      outerRadius={135}
-                      startAngle={90}
-                      endAngle={-270}
-                      label={renderCategoryCurvedLabel}
-                      labelLine={false}
-                      isAnimationActive={false}
-                    >
-                      {globalPie.map((entry, i) => (
-                        <Cell key={i} fill={entry.fill} cursor="pointer" />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
+<div className="bg-white rounded-2xl shadow p-3 sm:p-4">
+  {/* Pleine largeur de la section (≈ largeur écran, moins le padding) */}
+  <div className="relative mx-auto w-full">
+    {/* Carré basé sur la largeur du conteneur */}
+    <div style={{ paddingTop: '100%' }} />
+    <div className="absolute inset-0">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={globalPie}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={70}
+            outerRadius={135}
+            startAngle={90}
+            endAngle={-270}
+            label={renderCategoryCurvedLabel}
+            labelLine={false}
+            isAnimationActive={false}
+          >
+            {globalPie.map((entry, i) => (
+              <Cell key={i} fill={entry.fill} cursor="pointer" />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  </div>
+</div>
+
         ) : (
           <div className="text-slate-500">No OKR data for this year.</div>
         )
