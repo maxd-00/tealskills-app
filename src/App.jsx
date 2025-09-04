@@ -133,7 +133,6 @@ const ROLES_CATEGORY_INDEX = Object.fromEntries(
   ROLES_CATEGORIES_NEW.map((c, i) => [c, i])
 );
 
-
 function Shell({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -167,7 +166,7 @@ function Shell({ children }) {
     navigate("/login", { replace: true });
   };
 
-  // Style des liens NAV
+  // Style des liens NAV (texte teal, actif en fond teal)
   const navLinkClass = ({ isActive }) =>
     `rounded-md transition-colors font-medium
      ${isActive
@@ -191,8 +190,8 @@ function Shell({ children }) {
             <div
               className={`flex items-center ${
                 isAdmin
-                  ? "gap-1.5 sm:gap-2 md:gap-2.5" // compact pour admin
-                  : "gap-3 sm:gap-4 md:gap-5"    // espacé pour user
+                  ? "gap-1.5 sm:gap-2 md:gap-2.5" // compact admin
+                  : "gap-2 sm:gap-2.5 md:gap-3"  // resserré user
               }`}
             >
               <NavLink
@@ -200,7 +199,7 @@ function Shell({ children }) {
                 className={`font-bold text-[#057e7f] ${
                   isAdmin
                     ? "text-sm sm:text-lg md:text-xl"
-                    : "text-base sm:text-xl md:text-2xl"
+                    : "text-base sm:text-lg md:text-xl"
                 }`}
               >
                 TealSkills
@@ -209,7 +208,7 @@ function Shell({ children }) {
                 className={`${navLinkClass} ${
                   isAdmin
                     ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
-                    : "px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base md:px-5 md:py-2.5 md:text-lg"
+                    : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
                 }`}
                 to="/okr"
               >
@@ -219,7 +218,7 @@ function Shell({ children }) {
                 className={`${navLinkClass} ${
                   isAdmin
                     ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
-                    : "px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base md:px-5 md:py-2.5 md:text-lg"
+                    : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
                 }`}
                 to="/role"
               >
@@ -229,7 +228,7 @@ function Shell({ children }) {
                 className={`${navLinkClass} ${
                   isAdmin
                     ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
-                    : "px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base md:px-5 md:py-2.5 md:text-lg"
+                    : "px-2.5 py-1.5 text-sm sm:px-3 sm:py-2 sm:text-base md:px-3.5 md:py-2.5 md:text-lg"
                 }`}
                 to="/global"
               >
@@ -250,7 +249,7 @@ function Shell({ children }) {
               <button
                 onClick={logout}
                 className={`rounded-md text-[#057e7f] hover:bg-[#057e7f]/10 ${
-                  isAdmin ? "p-1.5 sm:p-2" : "p-2.5 sm:p-3"
+                  isAdmin ? "p-1.5 sm:p-2" : "p-2 sm:p-2.5"
                 }`}
                 aria-label="Logout"
               >
@@ -286,9 +285,6 @@ function Shell({ children }) {
     </div>
   );
 }
-
-
-
 
 function navClass({ isActive }) {
   return `px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
