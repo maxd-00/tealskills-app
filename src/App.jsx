@@ -781,7 +781,7 @@ function OKR() {
       <h1 className="text-2xl font-bold text-[#057e7f]">My OKRs</h1>
 
       {/* Year (versions, propres à l'utilisateur) */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-slate-600">Year</span>
         <select
           className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
@@ -948,7 +948,16 @@ style={{ height: '48dvh' }} // mobile: hauteur basée sur la "dynamic viewport h
       {showAdd && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowAdd(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-4 border border-slate-200">
+ <div
+   className="
+     relative bg-white rounded-2xl shadow
+     p-3 sm:p-4
+     mx-auto
+     w-full
+     max-w-[min(100vw-32px,720px)]
+     aspect-square
+   "
+ >
 <div className="mb-2">
   <h3 className="text-lg font-semibold text-[#057e7f]">New OKR — {category}</h3>
 </div>
