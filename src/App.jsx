@@ -2932,7 +2932,7 @@ function RolePage() {
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // ----- utils géométrie / rendu (identiques à avant, sauf labels dynamiques) -----
+  // ----- utils géométrie / rendu -----
   const rgba = (hex, a) => {
     const h = hex.replace("#", "");
     const n = parseInt(h, 16);
@@ -2957,7 +2957,6 @@ function RolePage() {
   };
 
   // Courbe le label de catégorie (Technical inversé)
-  // ⬇️ font-size rendu dynamique + labels n’absorbent pas les clics
   const renderCategoryCurvedLabel = (props) => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, name, index } = props;
     const LABEL_OFFSET = 30;
@@ -2972,9 +2971,8 @@ function RolePage() {
       : arcPath(cx, cy, rLabel, s, e, 1);
 
     const id = `cat-arc-${index}-${Math.round(s)}-${Math.round(e)}-${forceReverse ? "rev" : "fwd"}`;
-
-    // Taille de police proportionnelle au rayon → responsive
-    const fontSize = Math.max(12, Math.round(outerRadius * 0.12));
+    // Police un peu plus grande et responsive
+    const fontSize = Math.max(12, Math.round(outerRadius * 0.14));
 
     return (
       <>
@@ -3014,11 +3012,10 @@ function RolePage() {
     return lines;
   }
 
-  // Label radial (jusqu'à 3 lignes) — ⬇️ version responsive (utilise les rayons réels du Pie)
+  // Label radial (jusqu'à 3 lignes) — responsive
   const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
     const { cx, cy, midAngle, name, index, innerRadius, outerRadius } = props;
 
-    // padding en fonction de la taille
     const padding = Math.max(8, Math.round(outerRadius * 0.04));
     const startR = innerRadius + padding;
     const endR   = outerRadius - padding;
@@ -3036,7 +3033,6 @@ function RolePage() {
     const x0 = cx + rMid * Math.cos(ang);
     const y0 = cy + rMid * Math.sin(ang);
 
-    // capacité de texte proportionnelle à l’épaisseur disponible
     const available = endR - startR;
     const charsPerLine = Math.max(6, Math.floor(available / 7));
     const lines = splitLines(name, charsPerLine, 3);
@@ -3044,8 +3040,8 @@ function RolePage() {
     const dySets = { 1: ["0"], 2: ["-0.6em", "1.2em"], 3: ["-1.2em", "0", "1.2em"] };
     const dyVals = dySets[Math.min(3, lines.length)] || ["0"];
 
-    // font-size en fonction du rayon
-    const fontSize = Math.max(10, Math.round(outerRadius * 0.10));
+    // Police plus grande pour lisibilité
+    const fontSize = Math.max(12, Math.round(outerRadius * 0.13));
 
     return (
       <text
@@ -3091,14 +3087,14 @@ function RolePage() {
     })();
   }, [userId]);
 
-  // Versions (comme OKR)
+  // Versions (comme OKR). Si tu as rendu les versions « par utilisateur », on filtre par user_id = current user.
   useEffect(() => {
     if (!userId) return;
     (async () => {
       const { data, error } = await supabase
         .from("okr_versions")
         .select("id,label,is_active,user_id,created_at")
-        .or(`user_id.eq.${userId},user_id.is.null`)
+        .or(`user_id.eq.${userId},user_id.is.null`)   // accepte versions globales (null) ou personnelles
         .order("created_at", { ascending: false });
       if (error) { console.error(error); return; }
       setVersions(data || []);
@@ -3170,6 +3166,7 @@ function RolePage() {
     if (!userId || !selectedComp?.id || !versionId) return;
     setSaving(true);
     try {
+      // upsert sur (user_id, version_id, competency_id)
       const payload = {
         user_id: userId,
         version_id: versionId,
@@ -3220,36 +3217,35 @@ function RolePage() {
         {definition ? definition : "No definition for this role."}
       </p>
 
-      {/* Pie chart — responsive plein écran (carré basé sur la largeur) */}
+      {/* Pie chart — responsive plein écran */}
       <div className="role-chart bg-white rounded-2xl shadow p-4">
         <style>{`.role-chart .recharts-tooltip-wrapper{display:none!important;}`}</style>
-        {/* Wrapper responsive */}
+        {/* Wrapper responsive carré (basé sur la largeur) */}
         <div className="relative w-full">
-          {/* Carré basé sur la largeur (aucune hauteur fixe) */}
           <div style={{ paddingTop: "100%" }} />
-          {/* Zone absolue qui remplit ce carré */}
           <div className="absolute inset-0">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                {/* Anneau intérieur (catégories) — % pour scaler */}
+              <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                {/* Anneau intérieur — PLEIN (pas de trou) */}
                 <Pie
                   data={innerData}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius="28%"
-                  outerRadius="46%"
+                  innerRadius="0%"       // ⬅️ plein
+                  outerRadius="38%"      // cercle central plus grand et plein
                   startAngle={90}
                   endAngle={-270}
                   label={renderCategoryCurvedLabel}
                   labelLine={false}
                   isAnimationActive={false}
+                  stroke="none"
                 >
                   {innerData.map((d) => (
                     <Cell key={d.name} fill={CAT_COLOR[d.name]} />
                   ))}
                 </Pie>
 
-                {/* Anneau extérieur par catégorie — % pour scaler */}
+                {/* Anneau extérieur — agrandi au maximum */}
                 {CAT_ORDER.map((cat) => {
                   const list = byCat[cat] || [];
                   if (!list.length) return null;
@@ -3263,7 +3259,7 @@ function RolePage() {
                     shade: 0.55 + (0.45 * (i % 6)) / 5,
                   }));
 
-                  // Label radial responsive (utilise les rayons réels fournis par Recharts)
+                  // Label radial responsive (utilise les rayons calculés)
                   const RadialLabel = makeOuterRadialLabelAdvanced(list.length, cat);
 
                   return (
@@ -3272,8 +3268,8 @@ function RolePage() {
                       data={data}
                       dataKey="value"
                       nameKey="name"
-                      innerRadius="56%"
-                      outerRadius="78%"
+                      innerRadius="48%"   // ⬅️ plus proche du centre
+                      outerRadius="96%"   // ⬅️ au plus près du bord de la carte
                       startAngle={start}
                       endAngle={end}
                       paddingAngle={1}
@@ -3357,6 +3353,7 @@ function RolePage() {
     </section>
   );
 }
+
 
 
 
