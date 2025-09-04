@@ -167,7 +167,7 @@ function Shell({ children }) {
     navigate("/login", { replace: true });
   };
 
-  // Style des liens NAV (texte teal, plus serré)
+  // Style des liens NAV (texte teal, compact)
   const navLinkClass = ({ isActive }) =>
     `rounded-md transition-colors
      px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base
@@ -201,20 +201,7 @@ function Shell({ children }) {
               <NavLink className={navLinkClass} to="/role">Role</NavLink>
               <NavLink className={navLinkClass} to="/global">Global</NavLink>
               {isAdmin && (
-                <NavLink
-                  to="/admin"
-                  className="p-1.5 sm:p-2 rounded-md text-[#057e7f] hover:bg-[#057e7f]/10"
-                  aria-label="Admin"
-                >
-                  {/* Icône engrenage */}
-                  <svg xmlns="http://www.w3.org/2000/svg"
-                       viewBox="0 0 24 24"
-                       fill="none" stroke="currentColor" strokeWidth="2"
-                       className="w-5 h-5">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09c.7 0 1.31-.4 1.51-1a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06c.46.46 1.12.6 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09c0 .7.4 1.31 1 1.51a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09c.2.61.81 1.01 1.51 1.01H21a2 2 0 0 1 0 4h-.09c-.7 0-1.31.4-1.51 1z" />
-                  </svg>
-                </NavLink>
+                <NavLink className={navLinkClass} to="/admin">Admin</NavLink>
               )}
             </div>
 
