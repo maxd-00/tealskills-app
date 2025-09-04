@@ -167,10 +167,11 @@ function Shell({ children }) {
     navigate("/login", { replace: true });
   };
 
-  // Style des liens NAV : texte teal + hover clair
+  // Style des liens NAV (texte teal, plus serré)
   const navLinkClass = ({ isActive }) =>
     `rounded-md transition-colors
-     px-2 py-1 text-sm font-medium
+     px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base
+     font-medium
      ${isActive
         ? "bg-[#057e7f] text-white"
         : "text-[#057e7f] hover:bg-[#057e7f]/10"}`;
@@ -187,28 +188,22 @@ function Shell({ children }) {
             h-14 md:h-16
           "
         >
-          <div className="flex items-center justify-between h-full px-3 sm:px-4">
+          <div className="flex items-center justify-between h-full px-2 sm:px-3">
             {/* Gauche : logo + liens */}
-            <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5">
               <NavLink
                 to="/"
-                className="font-bold text-[#057e7f] text-base sm:text-lg md:text-xl"
+                className="font-bold text-[#057e7f] text-sm sm:text-lg md:text-xl"
               >
                 TealSkills
               </NavLink>
-              <NavLink className={navLinkClass} to="/okr">
-                OKR
-              </NavLink>
-              <NavLink className={navLinkClass} to="/role">
-                Role
-              </NavLink>
-              <NavLink className={navLinkClass} to="/global">
-                Global
-              </NavLink>
+              <NavLink className={navLinkClass} to="/okr">OKR</NavLink>
+              <NavLink className={navLinkClass} to="/role">Role</NavLink>
+              <NavLink className={navLinkClass} to="/global">Global</NavLink>
               {isAdmin && (
                 <NavLink
                   to="/admin"
-                  className="p-2 rounded-md text-[#057e7f] hover:bg-[#057e7f]/10"
+                  className="p-1.5 sm:p-2 rounded-md text-[#057e7f] hover:bg-[#057e7f]/10"
                   aria-label="Admin"
                 >
                   {/* Icône engrenage */}
@@ -227,7 +222,7 @@ function Shell({ children }) {
             <div className="flex items-center">
               <button
                 onClick={logout}
-                className="p-2 rounded-md text-[#057e7f] hover:bg-[#057e7f]/10"
+                className="p-1.5 sm:p-2 rounded-md text-[#057e7f] hover:bg-[#057e7f]/10"
                 aria-label="Logout"
               >
                 {/* Icône porte */}
