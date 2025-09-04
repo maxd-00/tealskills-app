@@ -133,10 +133,6 @@ const ROLES_CATEGORY_INDEX = Object.fromEntries(
   ROLES_CATEGORIES_NEW.map((c, i) => [c, i])
 );
 
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthCtx";
-import { supabase } from "@/lib/supabaseClient";
 
 function Shell({ children }) {
   const location = useLocation();
