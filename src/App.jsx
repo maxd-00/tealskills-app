@@ -167,11 +167,9 @@ function Shell({ children }) {
     navigate("/login", { replace: true });
   };
 
-  // Style des liens NAV (texte teal, compact)
+  // Style des liens NAV
   const navLinkClass = ({ isActive }) =>
-    `rounded-md transition-colors
-     px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base
-     font-medium
+    `rounded-md transition-colors font-medium
      ${isActive
         ? "bg-[#057e7f] text-white"
         : "text-[#057e7f] hover:bg-[#057e7f]/10"}`;
@@ -190,18 +188,60 @@ function Shell({ children }) {
         >
           <div className="flex items-center justify-between h-full px-2 sm:px-3">
             {/* Gauche : logo + liens */}
-            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5">
+            <div
+              className={`flex items-center ${
+                isAdmin
+                  ? "gap-1.5 sm:gap-2 md:gap-2.5" // compact pour admin
+                  : "gap-3 sm:gap-4 md:gap-5"    // espacé pour user
+              }`}
+            >
               <NavLink
                 to="/"
-                className="font-bold text-[#057e7f] text-sm sm:text-lg md:text-xl"
+                className={`font-bold text-[#057e7f] ${
+                  isAdmin
+                    ? "text-sm sm:text-lg md:text-xl"
+                    : "text-base sm:text-xl md:text-2xl"
+                }`}
               >
                 TealSkills
               </NavLink>
-              <NavLink className={navLinkClass} to="/okr">OKR</NavLink>
-              <NavLink className={navLinkClass} to="/role">Role</NavLink>
-              <NavLink className={navLinkClass} to="/global">Global</NavLink>
+              <NavLink
+                className={`${navLinkClass} ${
+                  isAdmin
+                    ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
+                    : "px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base md:px-5 md:py-2.5 md:text-lg"
+                }`}
+                to="/okr"
+              >
+                OKR
+              </NavLink>
+              <NavLink
+                className={`${navLinkClass} ${
+                  isAdmin
+                    ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
+                    : "px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base md:px-5 md:py-2.5 md:text-lg"
+                }`}
+                to="/role"
+              >
+                Role
+              </NavLink>
+              <NavLink
+                className={`${navLinkClass} ${
+                  isAdmin
+                    ? "px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base"
+                    : "px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base md:px-5 md:py-2.5 md:text-lg"
+                }`}
+                to="/global"
+              >
+                Global
+              </NavLink>
               {isAdmin && (
-                <NavLink className={navLinkClass} to="/admin">Admin</NavLink>
+                <NavLink
+                  className={`${navLinkClass} px-1.5 py-1 text-xs sm:px-2 sm:text-sm md:px-2.5 md:text-base`}
+                  to="/admin"
+                >
+                  Admin
+                </NavLink>
               )}
             </div>
 
@@ -209,16 +249,25 @@ function Shell({ children }) {
             <div className="flex items-center">
               <button
                 onClick={logout}
-                className="p-1.5 sm:p-2 rounded-md text-[#057e7f] hover:bg-[#057e7f]/10"
+                className={`rounded-md text-[#057e7f] hover:bg-[#057e7f]/10 ${
+                  isAdmin ? "p-1.5 sm:p-2" : "p-2.5 sm:p-3"
+                }`}
                 aria-label="Logout"
               >
                 {/* Icône porte */}
-                <svg xmlns="http://www.w3.org/2000/svg"
-                     viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" strokeWidth="2"
-                     className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round"
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className={isAdmin ? "w-5 h-5" : "w-6 h-6"}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"
+                  />
                 </svg>
               </button>
             </div>
