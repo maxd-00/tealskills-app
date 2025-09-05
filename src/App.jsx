@@ -1067,13 +1067,20 @@ function Global() {
 
       <div className="text-slate-600">{yearTitle}</div>
 
-      {/* Hauteur fixe 2000px */}
-      <div className="bg-white rounded-2xl shadow p-4">
-        <ResponsiveContainer width="100%" height={2000}>
+      {/* Hauteur visible en un coup d'œil (ajuste 60vh -> 55vh/65vh si besoin) */}
+      <div className="bg-white rounded-2xl shadow p-4" style={{ height: "60vh" }}>
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            {/* Axe X prend toute la largeur */}
-            <XAxis dataKey="month" ticks={CAL} interval={0} />
+            {/* Axe X : police réduite */}
+            <XAxis
+              dataKey="month"
+              ticks={CAL}
+              interval={0}
+              tick={{ fontSize: 10, fill: "#334155" }}
+              tickLine={false}
+              axisLine={{ stroke: "#e2e8f0" }}
+            />
             {/* Axe Y masqué */}
             <YAxis hide />
             <Tooltip />
@@ -1101,6 +1108,7 @@ function Global() {
     </section>
   );
 }
+
 
 
 
