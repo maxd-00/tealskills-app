@@ -1118,12 +1118,13 @@ function Global() {
 function Admin() {
   const [tab, setTab] = useState("okr"); // okr | global | roles | employee
 
-  // Hauteur = viewport - navbar (64px) - marges/paddings (~72px)
   return (
-    <section className="h-[calc(100svh-64px-72px)] flex flex-col">
-      <header className="flex items-center justify-between gap-3 pb-3">
-        <h1 className="text-2xl font-bold text-[#057e7f]">Admin</h1>
-        <div className="flex gap-2 bg-slate-100 rounded-full p-1">
+    // 100dvh = hauteur dynamique mobile (ne saute pas avec la barre URL)
+    <section className="h-[calc(100dvh-64px)] flex flex-col px-3 pb-[env(safe-area-inset-bottom)]">
+      {/* Onglets: scroll horizontal sur mobile */}
+      <header className="pb-2">
+        <h1 className="text-xl md:text-2xl font-bold text-[#057e7f] mb-2">Admin</h1>
+        <div className="flex gap-2 bg-slate-100 rounded-full p-1 overflow-x-auto no-scrollbar whitespace-nowrap">
           {[
             { key: "okr", label: "OKR Management" },
             { key: "global", label: "Global Objectives" },
@@ -1133,7 +1134,7 @@ function Admin() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-1.5 rounded-full text-sm ${
+              className={`px-3 md:px-4 py-1.5 rounded-full text-sm ${
                 tab === t.key ? "bg-[#057e7f] text-white shadow" : "bg-white text-[#057e7f]"
               }`}
               type="button"
@@ -1144,7 +1145,7 @@ function Admin() {
         </div>
       </header>
 
-      {/* zone scrollable */}
+      {/* zone scrollable interne */}
       <div className="flex-1 overflow-auto rounded-2xl">
         {tab === "okr" && <AdminOKR />}
         {tab === "global" && <AdminGlobal />}
@@ -1156,8 +1157,6 @@ function Admin() {
 }
 
 
-
-
 /* =============================
  * OKR Management — Versions / Employee OKRs
  * ============================= */
@@ -1166,7 +1165,7 @@ function AdminOKR() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-3 flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
+      <div className="mb-2 flex gap-2 bg-slate-100 rounded-full p-1 w-full overflow-x-auto no-scrollbar whitespace-nowrap">
         {[
           { key: "versions", label: "Versions" },
           { key: "employee", label: "Employee OKRs" },
@@ -1176,7 +1175,7 @@ function AdminOKR() {
             key={t.key}
             onClick={() => setSubTab(t.key)}
             type="button"
-            className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
+            className={`px-3 md:px-4 py-1.5 rounded-full text-sm transition-colors ${
               subTab === t.key ? "bg-[#057e7f] text-white shadow font-medium" : "bg-white text-[#057e7f]"
             }`}
           >
@@ -1193,6 +1192,7 @@ function AdminOKR() {
     </div>
   );
 }
+
 
 
 
@@ -1316,9 +1316,10 @@ function AdminOKR_Versions() {
       </div>
 
       {/* Liste des versions */}
-      <div className="bg-white p-4 rounded-xl shadow">
-        <div className="overflow-auto max-h-[60vh]">
-          <table className="min-w-full text-sm">
+<div className="bg-white p-3 md:p-4 rounded-xl shadow">
+  <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh]">
+    <table className="min-w-[640px] w-full text-xs md:text-sm">
+
             <thead className="bg-slate-50">
               <tr>
                 <th className="text-left p-2">Label</th>
@@ -1513,8 +1514,10 @@ function AdminOKR_Employee() {
       </div>
 
       {/* Visualisation */}
-      <div className="overflow-auto max-h-[60vh] bg-white rounded-xl shadow">
-        <table className="min-w-full text-sm">
+<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
+  <table className="min-w-[560px] w-full text-xs md:text-sm">
+
+
           <thead className="bg-slate-50">
             <tr>
               <th className="text-left p-2 w-44">Category</th>
@@ -1645,8 +1648,9 @@ function AdminOKR_Visualization() {
 
   return (
     <div className="grid gap-4">
-      <div className="overflow-auto max-h-[60vh] bg-white rounded-2xl shadow">
-        <table className="min-w-full text-sm">
+<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
+  <table className="min-w-[720px] w-full text-xs md:text-sm">
+
           <thead className="bg-slate-100 sticky top-0">
             <tr>
               <th className="text-left p-3">Email</th>
@@ -1829,8 +1833,9 @@ function AdminGlobal_New() {
         {years.length === 0 ? (
           <div className="text-slate-500">No years yet.</div>
         ) : (
-          <div className="overflow-auto max-h-[60vh]">
-            <table className="min-w-full text-sm">
+<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh]">
+  <table className="min-w-[680px] w-full text-xs md:text-sm">
+
               <thead className="bg-slate-50">
                 <tr>
                   <th className="text-left p-2">Year</th>
@@ -1965,8 +1970,9 @@ function AdminGlobal_Data() {
         </select>
       </div>
 
-      <div className="bg-white p-4 rounded-xl shadow">
-        <div className="grid md:grid-cols-3 gap-2 max-h-[60vh] overflow-auto pr-1">
+<div className="bg-white p-3 md:p-4 rounded-xl shadow">
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[56vh] md:max-h-[60vh] overflow-auto pr-1">
+
           {months.map((m, idx2) => (
             <label key={m.id} className="flex items-center gap-2">
               <span className="w-10">{m.month}</span>
@@ -2405,8 +2411,9 @@ function AdminRoles_Description() {
       </div>
 
       {/* Liste */}
-      <div className="overflow-auto max-h-[60vh] bg-white rounded-2xl shadow">
-        <table className="min-w-full text-sm">
+<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
+  <table className="min-w-[840px] w-full text-xs md:text-sm">
+
           <thead className="bg-slate-50">
             <tr>
               <th className="text-left p-2">Role</th>
@@ -2612,8 +2619,9 @@ function AdminRoles_Definition() {
         </div>
       </div>
 
-      <div className="overflow-auto max-h-[60vh] bg-white rounded-2xl shadow">
-        <table className="min-w-full text-sm">
+<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
+  <table className="min-w-[720px] w-full text-xs md:text-sm">
+
           <thead className="bg-slate-50">
             <tr>
               <th className="text-left p-2">Role</th>
@@ -2748,8 +2756,9 @@ function AdminRoles_Assign() {
           Define roles first in “Definition of roles”.
         </div>
       )}
-      <div className="overflow-auto max-h-[60vh] bg-white rounded-xl shadow">
-        <table className="min-w-full text-sm">
+<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-xl shadow">
+  <table className="min-w-[560px] w-full text-xs md:text-sm">
+
           <thead className="bg-slate-50">
             <tr>
               <th className="text-left p-2">Email</th>
@@ -2822,8 +2831,9 @@ function AdminEmployees() {
 
   return (
     <section className="grid gap-4">
-      <div className="overflow-auto max-h-[60vh] bg-white rounded-2xl shadow">
-        <table className="min-w-full text-sm">
+<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-xl shadow">
+  <table className="min-w-[560px] w-full text-xs md:text-sm">
+
           <thead className="bg-slate-50">
             <tr>
               <th className="text-left p-2">Email</th>
