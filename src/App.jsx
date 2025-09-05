@@ -1119,12 +1119,11 @@ function Admin() {
   const [tab, setTab] = useState("okr"); // okr | global | roles | employee
 
   return (
-    // 100dvh = hauteur dynamique mobile (ne saute pas avec la barre URL)
-    <section className="h-[calc(100dvh-64px)] flex flex-col px-3 pb-[env(safe-area-inset-bottom)]">
-      {/* Onglets: scroll horizontal sur mobile */}
+    <section className="h-[calc(100dvh-64px)] flex flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+8px)] overflow-hidden">
       <header className="pb-2">
         <h1 className="text-xl md:text-2xl font-bold text-[#057e7f] mb-2">Admin</h1>
-        <div className="flex gap-2 bg-slate-100 rounded-full p-1 overflow-x-auto no-scrollbar whitespace-nowrap">
+        {/* ✅ onglets qui wrap sur mobile */}
+        <div className="flex flex-wrap gap-2 bg-slate-100 rounded-full p-1">
           {[
             { key: "okr", label: "OKR Management" },
             { key: "global", label: "Global Objectives" },
@@ -1145,7 +1144,6 @@ function Admin() {
         </div>
       </header>
 
-      {/* zone scrollable interne */}
       <div className="flex-1 overflow-auto rounded-2xl">
         {tab === "okr" && <AdminOKR />}
         {tab === "global" && <AdminGlobal />}
@@ -1165,7 +1163,8 @@ function AdminOKR() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-2 flex gap-2 bg-slate-100 rounded-full p-1 w-full overflow-x-auto no-scrollbar whitespace-nowrap">
+      {/* ✅ sous-onglets qui wrap sur mobile */}
+      <div className="mb-2 flex flex-wrap gap-2 bg-slate-100 rounded-full p-1 w-full">
         {[
           { key: "versions", label: "Versions" },
           { key: "employee", label: "Employee OKRs" },
@@ -1192,8 +1191,6 @@ function AdminOKR() {
     </div>
   );
 }
-
-
 
 
 
@@ -1372,8 +1369,6 @@ function AdminOKR_Versions() {
     </div>
   );
 }
-
-
 
 function AdminOKR_Employee() {
   const [employees, setEmployees] = useState([]);
@@ -1564,8 +1559,6 @@ function AdminOKR_Employee() {
   );
 }
 
-
-
 function AdminOKR_Visualization() {
   const [users, setUsers] = useState([]);
   const [rows, setRows] = useState([]);
@@ -1685,12 +1678,6 @@ function AdminOKR_Visualization() {
   );
 }
 
-
-
-
-/* =============================
- * Global Objectives — New / Data
- * ============================= */
 function AdminGlobal() {
   const [subTab, setSubTab] = useState("new"); // new | data
   return (
@@ -1719,8 +1706,6 @@ function AdminGlobal() {
     </div>
   );
 }
-
-
 
 function AdminGlobal_New() {
   const [years, setYears] = useState([]);
@@ -1893,7 +1878,6 @@ function AdminGlobal_New() {
   );
 }
 
-
 function AdminGlobal_Data() {
   const [years, setYears] = useState([]);
   const [yearId, setYearId] = useState("");
@@ -2009,10 +1993,6 @@ function AdminGlobal_Data() {
   );
 }
 
-
-/* =============================
- * Visualization — by OKR Version
- * ============================= */
 function AdminView() {
   const [versions, setVersions] = useState([]);
   const [versionId, setVersionId] = useState("");
@@ -2225,7 +2205,8 @@ function AdminRoles() {
 
   return (
     <section className="h-full flex flex-col">
-      <div className="mb-3 flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
+      {/* ✅ wrap sur mobile */}
+      <div className="mb-3 flex flex-wrap gap-2 bg-slate-100 rounded-full p-1 w-full">
         {[
           { key: "defs",  label: "Definition of roles" },
           { key: "comp",  label: "Role competencies" },
@@ -2252,9 +2233,6 @@ function AdminRoles() {
     </section>
   );
 }
-
-
-
 
 
 /* =============================
