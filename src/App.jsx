@@ -1115,43 +1115,47 @@ function Global() {
 
 
 
-
-
-
-
 function Admin() {
   const [tab, setTab] = useState("okr"); // okr | global | roles | employee
+
+  // Hauteur = viewport - navbar (64px) - marges/paddings (~72px)
   return (
-    <section className="space-y-6">
-      <h1 className="text-2xl font-bold text-[#057e7f]">Admin</h1>
+    <section className="h-[calc(100svh-64px-72px)] flex flex-col">
+      <header className="flex items-center justify-between gap-3 pb-3">
+        <h1 className="text-2xl font-bold text-[#057e7f]">Admin</h1>
+        <div className="flex gap-2 bg-slate-100 rounded-full p-1">
+          {[
+            { key: "okr", label: "OKR Management" },
+            { key: "global", label: "Global Objectives" },
+            { key: "roles", label: "Roles" },
+            { key: "employee", label: "Employees" },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-4 py-1.5 rounded-full text-sm ${
+                tab === t.key ? "bg-[#057e7f] text-white shadow" : "bg-white text-[#057e7f]"
+              }`}
+              type="button"
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </header>
 
-      {/* Top-level tabs */}
-      <div className="flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
-        {[
-          { key: "okr", label: "OKR Management" },
-          { key: "global", label: "Global Objectives" },
-          { key: "roles", label: "Roles" },
-          { key: "employee", label: "Employees" }, // ← NOUVEAU
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-1.5 rounded-full text-sm ${
-              tab === t.key ? "bg-[#057e7f] text-white shadow" : "bg-white text-[#057e7f]"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* zone scrollable */}
+      <div className="flex-1 overflow-auto rounded-2xl">
+        {tab === "okr" && <AdminOKR />}
+        {tab === "global" && <AdminGlobal />}
+        {tab === "roles" && <AdminRoles />}
+        {tab === "employee" && <AdminEmployees />}
       </div>
-
-      {tab === "okr" && <AdminOKR />}
-      {tab === "global" && <AdminGlobal />}
-      {tab === "roles" && <AdminRoles />}
-      {tab === "employee" && <AdminEmployees />}{/* ← NOUVEAU */}
     </section>
   );
 }
+
+
 
 
 /* =============================
@@ -1159,23 +1163,21 @@ function Admin() {
  * ============================= */
 function AdminOKR() {
   const [subTab, setSubTab] = useState("versions"); // versions | employee | visualization
+
   return (
-    <div className="grid gap-6">
-      {/* Sub-tabs */}
-      <div className="flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
+    <div className="h-full flex flex-col">
+      <div className="mb-3 flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
         {[
           { key: "versions", label: "Versions" },
           { key: "employee", label: "Employee OKRs" },
-          { key: "visualization", label: "Visualization" }, // ← ajouté ici
+          { key: "visualization", label: "Visualization" },
         ].map((t) => (
           <button
             key={t.key}
             onClick={() => setSubTab(t.key)}
             type="button"
             className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
-              subTab === t.key
-                ? "bg-[#057e7f] text-white shadow font-medium"
-                : "bg-white text-[#057e7f]"
+              subTab === t.key ? "bg-[#057e7f] text-white shadow font-medium" : "bg-white text-[#057e7f]"
             }`}
           >
             {t.label}
@@ -1183,12 +1185,16 @@ function AdminOKR() {
         ))}
       </div>
 
-      {subTab === "versions" && <AdminOKR_Versions />}
-      {subTab === "employee" && <AdminOKR_Employee />}
-      {subTab === "visualization" && <AdminOKR_Visualization />}{/* ← nouveau */}
+      <div className="flex-1 overflow-auto">
+        {subTab === "versions" && <AdminOKR_Versions />}
+        {subTab === "employee" && <AdminOKR_Employee />}
+        {subTab === "visualization" && <AdminOKR_Visualization />}
+      </div>
     </div>
   );
 }
+
+
 
 
 function AdminOKR_Versions() {
@@ -1250,7 +1256,6 @@ function AdminOKR_Versions() {
 
   async function setActive(id) {
     try {
-      // Désactive les autres versions du même user
       await supabase.from("okr_versions").update({ is_active: false }).eq("user_id", userId).neq("id", id);
       await supabase.from("okr_versions").update({ is_active: true }).eq("id", id).eq("user_id", userId);
       await load();
@@ -1290,7 +1295,7 @@ function AdminOKR_Versions() {
         </label>
       </div>
 
-      {/* Création de version (pour le consultant sélectionné) */}
+      {/* Création de version */}
       <div className="bg-white p-4 rounded-xl shadow grid gap-2">
         <div className="font-medium">Create a version for this employee</div>
         <div className="flex gap-2 flex-wrap items-center">
@@ -1310,9 +1315,9 @@ function AdminOKR_Versions() {
         </div>
       </div>
 
-      {/* Liste des versions (du consultant sélectionné) */}
+      {/* Liste des versions */}
       <div className="bg-white p-4 rounded-xl shadow">
-        <div className="overflow-auto">
+        <div className="overflow-auto max-h-[60vh]">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50">
               <tr>
@@ -1328,9 +1333,7 @@ function AdminOKR_Versions() {
                   <td className="p-2">{v.label}</td>
                   <td className="p-2">
                     {v.is_active ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                        active
-                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">active</span>
                     ) : ("")}
                   </td>
                   <td className="p-2">
@@ -1370,17 +1373,15 @@ function AdminOKR_Versions() {
 }
 
 
+
 function AdminOKR_Employee() {
   const [employees, setEmployees] = useState([]);
   const [employeeId, setEmployeeId] = useState("");
-
   const [versions, setVersions] = useState([]);
   const [versionId, setVersionId] = useState("");
-
   const [items, setItems] = useState([]);
   const [answersMap, setAnswersMap] = useState({});
 
-  // Charger les employés
   useEffect(() => {
     (async () => {
       try {
@@ -1398,7 +1399,6 @@ function AdminOKR_Employee() {
     })();
   }, []);
 
-  // Charger les versions de l’employé sélectionné
   useEffect(() => {
     if (!employeeId) return;
     (async () => {
@@ -1419,7 +1419,6 @@ function AdminOKR_Employee() {
     })();
   }, [employeeId]);
 
-  // Charger TOUS les OKRs + réponses pour l’employé/version (plus de filtre par catégorie)
   useEffect(() => {
     if (!employeeId || !versionId) {
       setItems([]);
@@ -1471,7 +1470,6 @@ function AdminOKR_Employee() {
     return <span className={`inline-block px-2 py-0.5 rounded-full text-white ${color}`}>{label}</span>;
   };
 
-  // Regrouper côté JS pour l’affichage (ordre fixe des catégories)
   const categories = ["Client", "Myself", "Company"];
   const grouped = categories.map(cat => ({
     cat,
@@ -1515,7 +1513,7 @@ function AdminOKR_Employee() {
       </div>
 
       {/* Visualisation */}
-      <div className="overflow-auto bg-white rounded-xl shadow">
+      <div className="overflow-auto max-h-[60vh] bg-white rounded-xl shadow">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
@@ -1536,7 +1534,6 @@ function AdminOKR_Employee() {
 
             {!allEmpty && grouped.map(section => (
               <React.Fragment key={section.cat}>
-                {/* séparateur de section si la catégorie a des lignes */}
                 {section.rows.length > 0 && (
                   <tr className="bg-slate-50/70">
                     <td className="p-2 font-semibold text-slate-700" colSpan={4}>
@@ -1549,9 +1546,7 @@ function AdminOKR_Employee() {
                   return (
                     <tr key={it.id} className="border-t align-top">
                       <td className="p-2">{it.category}</td>
-                      <td className="p-2 whitespace-pre-wrap text-slate-800">
-                        {it.description || it.title}
-                      </td>
+                      <td className="p-2 whitespace-pre-wrap text-slate-800">{it.description || it.title}</td>
                       <td className="p-2">{badge(ans.status)}</td>
                       <td className="p-2 whitespace-pre-wrap text-slate-700">{ans.notes || "—"}</td>
                     </tr>
@@ -1567,6 +1562,7 @@ function AdminOKR_Employee() {
 }
 
 
+
 function AdminOKR_Visualization() {
   const [users, setUsers] = useState([]);
   const [rows, setRows] = useState([]);
@@ -1574,7 +1570,6 @@ function AdminOKR_Visualization() {
   useEffect(() => {
     (async () => {
       try {
-        // 1) Tous les users
         const { data: u, error: eu } = await supabase
           .from("profiles")
           .select("id,email")
@@ -1582,7 +1577,6 @@ function AdminOKR_Visualization() {
         if (eu) throw eu;
         setUsers(u || []);
 
-        // 2) Versions ACTIVES par utilisateur (nécessite okr_versions.user_id)
         const { data: vers, error: ev } = await supabase
           .from("okr_versions")
           .select("id,user_id,is_active")
@@ -1596,7 +1590,6 @@ function AdminOKR_Visualization() {
           return;
         }
 
-        // 3) OKR items et answers, uniquement pour les versions actives
         const { data: items, error: ei } = await supabase
           .from("okr_items")
           .select("id,category,assigned_user_id,version_id")
@@ -1609,7 +1602,6 @@ function AdminOKR_Visualization() {
           .in("version_id", activeVersionIds);
         if (ea) throw ea;
 
-        // 4) Agrégation par user → catégories
         const itemsById = new Map((items || []).map(i => [i.id, i]));
         const userMap   = new Map((u || []).map(x => [x.id, x.email]));
         const perUser   = new Map(); // userEmail -> { Client:[], Myself:[], Company:[] }
@@ -1617,7 +1609,6 @@ function AdminOKR_Visualization() {
         for (const a of (answers || [])) {
           const it = itemsById.get(a.item_id);
           if (!it) continue;
-          // on NE prend que si la version de la réponse est la version active du user
           const activeVid = activeByUser.get(a.user_id);
           if (!activeVid || activeVid !== a.version_id) continue;
 
@@ -1654,8 +1645,7 @@ function AdminOKR_Visualization() {
 
   return (
     <div className="grid gap-4">
-      {/* Pas de selector de version ici : on affiche UNIQUEMENT la version active de chacun */}
-      <div className="overflow-auto bg-white rounded-2xl shadow">
+      <div className="overflow-auto max-h-[60vh] bg-white rounded-2xl shadow">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-100 sticky top-0">
             <tr>
@@ -1693,38 +1683,40 @@ function AdminOKR_Visualization() {
 
 
 
+
 /* =============================
  * Global Objectives — New / Data
  * ============================= */
 function AdminGlobal() {
   const [subTab, setSubTab] = useState("new"); // new | data
   return (
-    <div className="grid gap-6">
-      <div className="flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
-  {[
-    { key: "new", label: "New" },
-    { key: "data", label: "Data" },
-  ].map((t) => (
-    <button
-      key={t.key}
-      onClick={() => setSubTab(t.key)}
-      type="button"
-      className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
-        subTab === t.key
-          ? "bg-[#057e7f] text-white shadow font-medium" // sélectionné
-          : "bg-white text-[#057e7f]"                    // non sélectionné
-      }`}
-    >
-      {t.label}
-    </button>
-  ))}
-</div>
+    <div className="h-full flex flex-col">
+      <div className="mb-3 flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
+        {[
+          { key: "new", label: "New" },
+          { key: "data", label: "Data" },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setSubTab(t.key)}
+            type="button"
+            className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
+              subTab === t.key ? "bg-[#057e7f] text-white shadow font-medium" : "bg-white text-[#057e7f]"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-
-      {subTab === "new" ? <AdminGlobal_New /> : <AdminGlobal_Data />}
+      <div className="flex-1 overflow-auto">
+        {subTab === "new" ? <AdminGlobal_New /> : <AdminGlobal_Data />}
+      </div>
     </div>
   );
 }
+
+
 
 function AdminGlobal_New() {
   const [years, setYears] = useState([]);
@@ -1734,52 +1726,50 @@ function AdminGlobal_New() {
     loadYears();
   }, []);
 
-async function loadYears() {
-  try {
-    const { data, error } = await supabase
-      .from("global_years")
-      .select("id,year,target,last_year,is_active")
-      .order("year", { ascending: false });
-    if (error) throw error;
-    setYears(data || []);
-  } catch (e) {
-    console.error(e);
-    alert(`Load years failed: ${e.message}`);
+  async function loadYears() {
+    try {
+      const { data, error } = await supabase
+        .from("global_years")
+        .select("id,year,target,last_year,is_active")
+        .order("year", { ascending: false });
+      if (error) throw error;
+      setYears(data || []);
+    } catch (e) {
+      console.error(e);
+      alert(`Load years failed: ${e.message}`);
+    }
   }
-}
-
 
   async function addYear() {
-  if (!newYear.year) return;
+    if (!newYear.year) return;
 
-  const isFirst = (years?.length || 0) === 0;
-  const payload = {
-    year: Number(newYear.year),
-    target: Number(newYear.target || 0),
-    last_year: Number(newYear.last_year || 0),
-    is_active: isFirst, // première année => active
-  };
+    const isFirst = (years?.length || 0) === 0;
+    const payload = {
+      year: Number(newYear.year),
+      target: Number(newYear.target || 0),
+      last_year: Number(newYear.last_year || 0),
+      is_active: isFirst,
+    };
 
-  try {
-    const { data, error } = await supabase
-      .from("global_years")
-      .insert(payload)
-      .select()
-      .single();
-    if (error) throw error;
+    try {
+      const { data, error } = await supabase
+        .from("global_years")
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
 
-    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    await supabase
-      .from("global_months")
-      .insert(MONTHS.map((m) => ({ year_id: data.id, month: m, value: 0 })));
+      const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      await supabase
+        .from("global_months")
+        .insert(MONTHS.map((m) => ({ year_id: data.id, month: m, value: 0 })));
 
-    setNewYear({ year: "", target: "", last_year: "" });
-    loadYears();
-  } catch (e) {
-    alert(`Add year failed: ${e.message}`);
+      setNewYear({ year: "", target: "", last_year: "" });
+      loadYears();
+    } catch (e) {
+      alert(`Add year failed: ${e.message}`);
+    }
   }
-}
-
 
   async function deleteYear(id) {
     if (!confirm("Delete this year? This will remove its monthly data.")) return;
@@ -1793,15 +1783,14 @@ async function loadYears() {
   }
 
   async function setActiveYear(id) {
-  try {
-    await supabase.from("global_years").update({ is_active: false }).neq("id", id);
-    await supabase.from("global_years").update({ is_active: true }).eq("id", id);
-    loadYears();
-  } catch (e) {
-    alert(`Set active year failed: ${e.message}`);
+    try {
+      await supabase.from("global_years").update({ is_active: false }).neq("id", id);
+      await supabase.from("global_years").update({ is_active: true }).eq("id", id);
+      loadYears();
+    } catch (e) {
+      alert(`Set active year failed: ${e.message}`);
+    }
   }
-}
-
 
   return (
     <div className="grid gap-4">
@@ -1835,119 +1824,99 @@ async function loadYears() {
       </div>
 
       {/* Existing years with target/last_year */}
-<div className="bg-white p-4 rounded-xl shadow">
-  <div className="text-sm text-slate-600 mb-2">Existing years</div>
-  {years.length === 0 ? (
-    <div className="text-slate-500">No years yet.</div>
-  ) : (
-    <div className="overflow-auto">
-      <table className="min-w-full text-sm">
-        <thead className="bg-slate-50">
-          <tr>
-            <th className="text-left p-2">Year</th>
-            <th className="text-left p-2">Target</th>
-            <th className="text-left p-2">Last Year</th>
-            <th className="text-left p-2">Status</th>
-            <th className="text-left p-2">Activity</th>
-            <th className="text-left p-2">Delete</th>
-          </tr>
-        </thead>
-        <tbody>
-          {years.map((y) => (
-            <tr key={y.id} className="border-t">
-              <td className="p-2">{y.year}</td>
-              <td className="p-2">{y.target}</td>
-              <td className="p-2">{y.last_year}</td>
-              <td className="p-2">
-                {y.is_active ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                    active
-                  </span>
-                ) : (
-                  ""
-                )}
-              </td>
-              <td className="p-2">
-                {!y.is_active ? (
-                  <button
-                    onClick={() => setActiveYear(y.id)}
-                    className="text-xs px-2 py-1 rounded-full bg-white text-[#057e7f] hover:bg-slate-50"
-                  >
-                    Set active
-                  </button>
-                ) : (
-                  <span className="text-xs text-slate-500">—</span>
-                )}
-              </td>
-              <td className="p-2">
-                <button
-                  onClick={() => deleteYear(y.id)}
-                  className="text-red-600 bg-white rounded-full px-2 hover:bg-slate-50"
-                  title="Delete year"
-                >
-                  ✕
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )}
-</div>
-
-
+      <div className="bg-white p-4 rounded-xl shadow">
+        <div className="text-sm text-slate-600 mb-2">Existing years</div>
+        {years.length === 0 ? (
+          <div className="text-slate-500">No years yet.</div>
+        ) : (
+          <div className="overflow-auto max-h-[60vh]">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="text-left p-2">Year</th>
+                  <th className="text-left p-2">Target</th>
+                  <th className="text-left p-2">Last Year</th>
+                  <th className="text-left p-2">Status</th>
+                  <th className="text-left p-2">Activity</th>
+                  <th className="text-left p-2">Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                {years.map((y) => (
+                  <tr key={y.id} className="border-t">
+                    <td className="p-2">{y.year}</td>
+                    <td className="p-2">{y.target}</td>
+                    <td className="p-2">{y.last_year}</td>
+                    <td className="p-2">
+                      {y.is_active ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                          active
+                        </span>
+                      ) : (
+                        ""
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {!y.is_active ? (
+                        <button
+                          onClick={() => setActiveYear(y.id)}
+                          className="text-xs px-2 py-1 rounded-full bg-white text-[#057e7f] hover:bg-slate-50"
+                        >
+                          Set active
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-500">—</span>
+                      )}
+                    </td>
+                    <td className="p-2">
+                      <button
+                        onClick={() => deleteYear(y.id)}
+                        className="text-red-600 bg-white rounded-full px-2 hover:bg-slate-50"
+                        title="Delete year"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
 
 function AdminGlobal_Data() {
   const [years, setYears] = useState([]);
   const [yearId, setYearId] = useState("");
   const [months, setMonths] = useState([]);
-  const { setToast } = useToast(); // (Point 5b)
+  const { setToast } = useToast();
 
-  // Calendar order
-  const CAL = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
+  const CAL = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const idx = Object.fromEntries(CAL.map((m, i) => [m, i]));
 
-  useEffect(() => {
-    loadYears();
-  }, []);
-async function loadYears() {
-  try {
-    const { data, error } = await supabase
-      .from("global_years")
-      .select("id,year,target,last_year,is_active")
-      .order("year", { ascending: false });
-    if (error) throw error;
+  useEffect(() => { loadYears(); }, []);
+  async function loadYears() {
+    try {
+      const { data, error } = await supabase
+        .from("global_years")
+        .select("id,year,target,last_year,is_active")
+        .order("year", { ascending: false });
+      if (error) throw error;
 
-    setYears(data || []);
-    const active = (data || []).find(y => y.is_active);
-    setYearId(active ? active.id : data?.[0]?.id || "");
-  } catch (e) {
-    console.error(e);
-    alert(`Load years failed: ${e.message}`);
+      setYears(data || []);
+      const active = (data || []).find(y => y.is_active);
+      setYearId(active ? active.id : data?.[0]?.id || "");
+    } catch (e) {
+      console.error(e);
+      alert(`Load years failed: ${e.message}`);
+    }
   }
-}
 
-
-  useEffect(() => {
-    if (yearId) loadMonths(yearId);
-  }, [yearId]);
+  useEffect(() => { if (yearId) loadMonths(yearId); }, [yearId]);
   async function loadMonths(yid) {
     try {
       const { data, error } = await supabase
@@ -1955,9 +1924,7 @@ async function loadYears() {
         .select("id,month,value")
         .eq("year_id", yid);
       if (error) throw error;
-      const sorted = (data || [])
-        .slice()
-        .sort((a, b) => idx[a.month] - idx[b.month]);
+      const sorted = (data || []).slice().sort((a, b) => idx[a.month] - idx[b.month]);
       setMonths(sorted);
     } catch (e) {
       console.error(e);
@@ -1974,7 +1941,6 @@ async function loadYears() {
           .eq("id", m.id);
         if (error) throw error;
       }
-      // (Point 5b) toast de succès
       setToast("Saved");
       setTimeout(() => setToast(""), 2000);
     } catch (e) {
@@ -1987,42 +1953,42 @@ async function loadYears() {
       <div className="flex items-center gap-2">
         <span className="text-sm text-slate-600">Year</span>
         <select
-  className="border rounded-md p-2 bg-white text-black"
-  value={yearId}
-  onChange={(e) => setYearId(e.target.value)}
->
-  {years.map((y) => (
-    <option key={y.id} value={y.id}>
-      {y.year}{y.is_active ? " (active)" : ""}
-    </option>
-  ))}
-</select>
-
+          className="border rounded-md p-2 bg-white text-black"
+          value={yearId}
+          onChange={(e) => setYearId(e.target.value)}
+        >
+          {years.map((y) => (
+            <option key={y.id} value={y.id}>
+              {y.year}{y.is_active ? " (active)" : ""}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-2 bg-white p-4 rounded-xl shadow">
-        {months.map((m, idx2) => (
-          <label key={m.id} className="flex items-center gap-2">
-            <span className="w-10">{m.month}</span>
-            <input
-  className="border rounded-md p-2 flex-1 bg-white text-black"
-  type="number"
-  value={m.value}
-  onChange={(e) => {
-    const v = Number(e.target.value || 0);
-    setMonths((list) => {
-      const next = [...list];
-      next[idx2] = { ...next[idx2], value: v };
-      return next;
-    });
-  }}
-/>
-
-          </label>
-        ))}
-        {months.length === 0 && (
-          <div className="text-slate-500">No data for this year.</div>
-        )}
+      <div className="bg-white p-4 rounded-xl shadow">
+        <div className="grid md:grid-cols-3 gap-2 max-h-[60vh] overflow-auto pr-1">
+          {months.map((m, idx2) => (
+            <label key={m.id} className="flex items-center gap-2">
+              <span className="w-10">{m.month}</span>
+              <input
+                className="border rounded-md p-2 flex-1 bg-white text-black"
+                type="number"
+                value={m.value}
+                onChange={(e) => {
+                  const v = Number(e.target.value || 0);
+                  setMonths((list) => {
+                    const next = [...list];
+                    next[idx2] = { ...next[idx2], value: v };
+                    return next;
+                  });
+                }}
+              />
+            </label>
+          ))}
+          {months.length === 0 && (
+            <div className="text-slate-500">No data for this year.</div>
+          )}
+        </div>
       </div>
 
       <div>
@@ -2036,6 +2002,7 @@ async function loadYears() {
     </div>
   );
 }
+
 
 /* =============================
  * Visualization — by OKR Version
@@ -2251,14 +2218,11 @@ function AdminRoles() {
   const [subTab, setSubTab] = useState("defs"); // comp | defs | assign
 
   return (
-    <section className="space-y-6">
-
-
-      {/* Sub-tabs */}
-      <div className="flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
+    <section className="h-full flex flex-col">
+      <div className="mb-3 flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
         {[
-          { key: "defs",  label: "Definition of roles" }, // ← nouveau
-          { key: "comp",  label: "Role competencies" },   // ← renommé
+          { key: "defs",  label: "Definition of roles" },
+          { key: "comp",  label: "Role competencies" },
           { key: "assign", label: "Role of employees" },
         ].map((t) => (
           <button
@@ -2267,18 +2231,23 @@ function AdminRoles() {
             className={`px-4 py-1.5 rounded-full text-sm ${
               subTab === t.key ? "bg-[#057e7f] text-white shadow" : "bg-white text-[#057e7f]"
             }`}
+            type="button"
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      {subTab === "comp"   && <AdminRoles_Description />}
-      {subTab === "defs"   && <AdminRoles_Definition />}
-      {subTab === "assign" && <AdminRoles_Assign />}
+      <div className="flex-1 overflow-auto">
+        {subTab === "comp"   && <AdminRoles_Description />}
+        {subTab === "defs"   && <AdminRoles_Definition />}
+        {subTab === "assign" && <AdminRoles_Assign />}
+      </div>
     </section>
   );
 }
+
+
 
 
 
@@ -2286,11 +2255,10 @@ function AdminRoles() {
  * Roles — Description des roles (form + liste CRUD)
  * ============================= */
 function AdminRoles_Description() {
-  const [role, setRole] = useState(""); // rôle choisi (vient de roles_definitions)
+  const [role, setRole] = useState("");
   const [category, setCategory] = useState(ROLES_CATEGORIES_NEW[0]);
   const [competency, setCompetency] = useState("");
   const [description, setDescription] = useState("");
-
   const [items, setItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [edit, setEdit] = useState({
@@ -2298,8 +2266,7 @@ function AdminRoles_Description() {
     description: "",
     category: ROLES_CATEGORIES_NEW[0],
   });
-
-  const [availableRoles, setAvailableRoles] = useState([]); // depuis roles_definitions
+  const [availableRoles, setAvailableRoles] = useState([]);
 
   useEffect(() => { loadRoles(); }, []);
   useEffect(() => { loadItems(); }, [availableRoles]);
@@ -2323,7 +2290,6 @@ function AdminRoles_Description() {
       .order("created_at", { ascending: true });
     if (error) { alert(`Load roles failed: ${error.message}`); return; }
 
-    // Tri : d’abord rôle (ordre alpha), puis catégorie (ordre NEW, legacy en fin), puis competency
     const sorted = (data || []).slice().sort((a, b) => {
       if ((a.role || "") !== (b.role || "")) return (a.role || "").localeCompare(b.role || "");
       const caKey = ROLES_LEGACY_TO_NEW[a.category] || a.category;
@@ -2339,7 +2305,6 @@ function AdminRoles_Description() {
   async function addItem() {
     const comp = competency.trim();
     if (!comp || !role) return;
-    // On enregistre uniquement dans les nouvelles catégories
     const payload = { role, category, competency: comp, description };
     const { error } = await supabase.from("roles_competencies").insert(payload);
     if (error) { alert(`Add failed: ${error.message}`); return; }
@@ -2351,7 +2316,7 @@ function AdminRoles_Description() {
     const payload = {
       competency: edit.competency.trim(),
       description: edit.description,
-      category: edit.category, // préserve la valeur existante si legacy (sauf si l’utilisateur choisit une new)
+      category: edit.category,
     };
     if (!payload.competency) return;
     const { error } = await supabase.from("roles_competencies").update(payload).eq("id", id);
@@ -2372,7 +2337,6 @@ function AdminRoles_Description() {
       {/* Formulaire */}
       <div className="bg-white p-4 rounded-2xl shadow grid gap-3">
         <div className="grid md:grid-cols-4 gap-3">
-          {/* Role */}
           <label className="grid gap-1">
             <span className="text-sm text-slate-600">Role</span>
             <select
@@ -2389,7 +2353,6 @@ function AdminRoles_Description() {
             </select>
           </label>
 
-          {/* Category (NOUVELLES seulement pour la création) */}
           <label className="grid gap-1">
             <span className="text-sm text-slate-600">Category</span>
             <select
@@ -2401,7 +2364,6 @@ function AdminRoles_Description() {
             </select>
           </label>
 
-          {/* Competency */}
           <label className="grid gap-1 md:col-span-2">
             <span className="text-sm text-slate-600">Competency (short)</span>
             <input
@@ -2414,7 +2376,6 @@ function AdminRoles_Description() {
           </label>
         </div>
 
-        {/* Description */}
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Description</span>
           <textarea
@@ -2444,7 +2405,7 @@ function AdminRoles_Description() {
       </div>
 
       {/* Liste */}
-      <div className="overflow-auto bg-white rounded-2xl shadow">
+      <div className="overflow-auto max-h-[60vh] bg-white rounded-2xl shadow">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
@@ -2459,8 +2420,6 @@ function AdminRoles_Description() {
             {items.map(it => (
               <tr key={it.id} className="border-t">
                 <td className="p-2">{it.role}</td>
-
-                {/* CATEGORY: si legacy, on garde la valeur, mais on propose aussi les nouvelles */}
                 <td className="p-2">
                   {editingId === it.id ? (
                     <select
@@ -2468,7 +2427,6 @@ function AdminRoles_Description() {
                       value={edit.category}
                       onChange={(e)=>setEdit(s=>({...s, category: e.target.value}))}
                     >
-                      {/* option actuelle (legacy ou new) */}
                       {!ROLES_CATEGORIES_NEW.includes(edit.category) && (
                         <option value={edit.category}>{edit.category} (legacy)</option>
                       )}
@@ -2481,7 +2439,6 @@ function AdminRoles_Description() {
                   )}
                 </td>
 
-                {/* COMPETENCY */}
                 <td className="p-2">
                   {editingId === it.id ? (
                     <input
@@ -2494,7 +2451,6 @@ function AdminRoles_Description() {
                   )}
                 </td>
 
-                {/* DESCRIPTION (aperçu court) */}
                 <td className="p-2">
                   {editingId === it.id ? (
                     <textarea
@@ -2541,7 +2497,7 @@ function AdminRoles_Description() {
                           setEdit({
                             competency: it.competency,
                             description: it.description || "",
-                            category: it.category, // garde la catégorie telle quelle (legacy possible)
+                            category: it.category,
                           });
                         }}
                         className="text-blue-600 bg-white rounded-full px-2 hover:bg-slate-50"
@@ -2570,6 +2526,7 @@ function AdminRoles_Description() {
     </div>
   );
 }
+
 
 
 
@@ -2623,7 +2580,6 @@ function AdminRoles_Definition() {
 
   return (
     <div className="grid gap-6">
-      {/* Formulaire d'ajout */}
       <div className="bg-white p-4 rounded-xl shadow grid gap-3">
         <div className="grid md:grid-cols-3 gap-3">
           <label className="grid gap-1">
@@ -2656,8 +2612,7 @@ function AdminRoles_Definition() {
         </div>
       </div>
 
-      {/* Liste */}
-      <div className="overflow-auto bg-white rounded-2xl shadow">
+      <div className="overflow-auto max-h-[60vh] bg-white rounded-2xl shadow">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
@@ -2749,6 +2704,7 @@ function AdminRoles_Definition() {
 }
 
 
+
 /* =============================
  * Roles — Assignation du role aux employés
  * ============================= */
@@ -2759,7 +2715,6 @@ function AdminRoles_Assign() {
   useEffect(() => { load(); }, []);
 
   async function load() {
-    // On récupère job_role_id (FK) au lieu de job_role (texte)
     const { data: u, error: eu } = await supabase
       .from("profiles")
       .select("id, email, job_role_id")
@@ -2793,7 +2748,7 @@ function AdminRoles_Assign() {
           Define roles first in “Definition of roles”.
         </div>
       )}
-      <div className="overflow-auto bg-white rounded-xl shadow">
+      <div className="overflow-auto max-h-[60vh] bg-white rounded-xl shadow">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
@@ -2831,6 +2786,7 @@ function AdminRoles_Assign() {
 }
 
 
+
 function AdminEmployees() {
   const [users, setUsers] = useState([]);
   const { setToast } = useToast();
@@ -2838,7 +2794,6 @@ function AdminEmployees() {
   useEffect(() => {
     (async () => {
       try {
-        // On suppose la colonne 'join_date' (DATE) dans 'profiles'
         const { data, error } = await supabase
           .from("profiles")
           .select("id, email, join_date")
@@ -2867,8 +2822,7 @@ function AdminEmployees() {
 
   return (
     <section className="grid gap-4">
-
-      <div className="overflow-auto bg-white rounded-2xl shadow">
+      <div className="overflow-auto max-h-[60vh] bg-white rounded-2xl shadow">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
@@ -2899,13 +2853,13 @@ function AdminEmployees() {
         </table>
       </div>
 
-      {/* Aide rapide */}
       <div className="text-xs text-slate-500">
         Tip: set each employee’s <em>date of joining</em> to use for anniversary-related features later.
       </div>
     </section>
   );
 }
+
 
 
 function RolePage() {
