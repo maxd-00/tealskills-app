@@ -3052,7 +3052,8 @@ const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
   const thickness = Math.max(8, endR - startR);
 
   // position radiale du label – collé vers l'extérieur
-  const rText = endR - Math.max(4, outerRadius * 0.01);
+const RATIO = 0.50; // essaie 0.55–0.70 selon ton goût
+const rText = startR + RATIO * (endR - startR);
 
   // position angulaire (milieu du slice), flip côté bas/haut
   let flip = false;
