@@ -993,24 +993,40 @@ function Global() {
   const CAL = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const idx = useMemo(() => Object.fromEntries(CAL.map((m,i)=>[m,i])), []);
 
-  // Charger les années
-useEffect(() => {
-  (async () => {
-    const { data, error } = await supabase
-      .from("global_years")
-      .select("id,year,target,last_year,is_active")
-      .order("year", { ascending: false });
-    if (error) {
-      console.error(error);
-      alert(`Load years failed: ${error.message}`);
-      return;
-    }
-    setYears(data || []);
-    const active = (data || []).find(y => y.is_active);
-    setYearId(active ? active.id : data?.[0]?.id || "");
-  })();
-}, []);
+  // Tick Y personnalisé : chiffres verticaux + petite police
+  const VerticalYAxisTick = ({ x, y, payload, fontSize = 10, fill = "#334155" }) => (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={4}
+        textAnchor="middle"
+        fill={fill}
+        fontSize={fontSize}
+        transform="rotate(-90)"
+      >
+        {payload?.value}
+      </text>
+    </g>
+  );
 
+  // Charger les années
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from("global_years")
+        .select("id,year,target,last_year,is_active")
+        .order("year", { ascending: false });
+      if (error) {
+        console.error(error);
+        alert(`Load years failed: ${error.message}`);
+        return;
+      }
+      setYears(data || []);
+      const active = (data || []).find(y => y.is_active);
+      setYearId(active ? active.id : data?.[0]?.id || "");
+    })();
+  }, []);
 
   // Charger meta + mois
   useEffect(() => {
@@ -1052,44 +1068,41 @@ useEffect(() => {
         <h1 className="text-2xl font-bold text-[#057e7f]">Global</h1>
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-600">Year</span>
-<select
-  className="rounded-md p-2 bg-white text-black border-0 focus:ring-2 focus:ring-[#057e7f]"
-  value={yearId}
-  onChange={(e) => setYearId(e.target.value)}
->
-  {years.map((y) => (
-    <option key={y.id} value={y.id}>
-      {y.year}{y.is_active ? " (active)" : ""}
-    </option>
-  ))}
-</select>
-
+          <select
+            className="rounded-md p-2 bg-white text-black border-0 focus:ring-2 focus:ring-[#057e7f]"
+            value={yearId}
+            onChange={(e) => setYearId(e.target.value)}
+          >
+            {years.map((y) => (
+              <option key={y.id} value={y.id}>
+                {y.year}{y.is_active ? " (active)" : ""}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div className="text-slate-600">{yearTitle}</div>
 
-      <div className="bg-white rounded-2xl shadow p-4 h-[380px]">
-        <ResponsiveContainer width="100%" height="100%">
+      {/* Hauteur fixe 2000px */}
+      <div className="bg-white rounded-2xl shadow p-4">
+        <ResponsiveContainer width="100%" height={2000}>
           <LineChart data={chartData} margin={{ top: 10, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" ticks={CAL} />
-            <YAxis allowDecimals={false} />
+            <YAxis
+              allowDecimals={false}
+              tick={<VerticalYAxisTick fontSize={10} />}  // ← vertical + petite police
+              tickLine={false}
+              axisLine={{ stroke: "#e2e8f0" }}
+              width={50}                                  // ← un peu d’espace pour les ticks rotés
+            />
             <Tooltip />
-            {/* Courbe cumulée en bleu */}
+            {/* Courbe cumulée */}
             <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={true} />
-            {/* Ligne Target en rouge */}
-<ReferenceLine
-  y={Number(yearMeta.target || 0)}
-  stroke="red"
-  strokeDasharray="4 4"
-/>
-<ReferenceLine
-  y={Number(yearMeta.last_year || 0)}
-  stroke="green"
-  strokeDasharray="4 4"
-/>
-
+            {/* Target (rouge) et Last Year (vert) */}
+            <ReferenceLine y={Number(yearMeta.target || 0)} stroke="red" strokeDasharray="4 4" />
+            <ReferenceLine y={Number(yearMeta.last_year || 0)} stroke="green" strokeDasharray="4 4" />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -1109,6 +1122,7 @@ useEffect(() => {
     </section>
   );
 }
+
 
 
 
