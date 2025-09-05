@@ -3034,43 +3034,50 @@ function RolePage() {
   }
 
 // Label radial externe : plus proche du bord + wrap sans ellipse dès que possible
+// === Label radial externe : centrage fin + wrap 2–3 lignes + auto-shrink ===
 const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
   const { cx, cy, midAngle, name, index, innerRadius, outerRadius } = props;
 
-  // largeur angulaire d’un slice de la catégorie (120° / n)
-  const anglePerSlice = total > 0 ? 120 / total : 0;
+  // ========= PARAMÈTRES REGLABLES =========
+  const RATIO = 0.50;              // 0 = bord intérieur, 1 = bord extérieur (distance radiale)
+  const ANGLE_PADDING_DEG = 1.5;     // marge angulaire de chaque côté du slice (évite les séparateurs)
+  const ARC_BIAS = 0.00;           // -1 → vers le début du slice, +1 → vers la fin (position le long de l’arc)
+  const ARC_USAGE = 0.98;          // proportion de la longueur d’arc utilisable (0–1)
+  const RADIAL_PADDING_PX = 3;     // petite marge radiale pour ne pas toucher les bords
+  const HEIGHT_USAGE = 0.98;       // proportion de l’épaisseur d’anneau exploitable (0–1)
+  const LINE_HEIGHT_SCALE = 1.00;  // interligne (1.00 = serré mais lisible)
+  const VERT_BIAS_PX = 0;          // décale légèrement le bloc ( + extérieur / - intérieur )
+  const CHAR_WIDTH_COEFF = 0.50;   // largeur moyenne d’un caractère (plus petit → plus de chars par ligne)
+  // ========================================
 
-  // ↓ marge angulaire pour utiliser plus l’arc (mais éviter les séparateurs)
-  const anglePadding = 3; // deg (était 5/6)
-  const effectiveDeg = Math.max(0, anglePerSlice - anglePadding * 2);
+  // largeur angulaire d’un slice (catégorie = 120°)
+  const anglePerSlice = total > 0 ? 120 / total : 0;
+  const effectiveDeg = Math.max(0, anglePerSlice - ANGLE_PADDING_DEG * 2);
   const effectiveRad = (effectiveDeg * Math.PI) / 180;
 
-  // ↓ marges radiales, et on place le texte près du bord extérieur
-  const paddingR = Math.max(3, Math.round(outerRadius * 0.015)); // était ~0.018–0.025
-  const startR   = innerRadius + paddingR;
-  const endR     = outerRadius - paddingR;
+  // géométrie radiale
+  const startR = innerRadius + Math.max(RADIAL_PADDING_PX, Math.round(outerRadius * 0.018));
+  const endR   = outerRadius - Math.max(RADIAL_PADDING_PX, Math.round(outerRadius * 0.018));
   const thickness = Math.max(8, endR - startR);
+  const rText = startR + RATIO * (endR - startR); // position finale du texte
 
-  // position radiale du label – collé vers l'extérieur
-const RATIO = 0.50; // essaie 0.55–0.70 selon ton goût
-const rText = startR + RATIO * (endR - startR);
-
-  // position angulaire (milieu du slice), flip côté bas/haut
+  // orientation (flip moitié basse) + biais le long de l’arc
   let flip = false;
   if (category === "Business impact") flip = true;
   else if (category === "Technical" && index >= Math.ceil(total / 2)) flip = true;
 
-  const rotateDeg = -midAngle + (flip ? 180 : 0);
-  const ang = (-midAngle * Math.PI) / 180;
+  const biasDeg = (effectiveDeg / 2) * ARC_BIAS;
+  const angleDeg = midAngle + (flip ? -biasDeg : biasDeg);
+  const ang = (-angleDeg * Math.PI) / 180;
+
   const x0 = cx + rText * Math.cos(ang);
   const y0 = cy + rText * Math.sin(ang);
 
-  // longueur d'arc utilisable au rayon rText
-  const usableArc = rText * effectiveRad;
+  // longueur d’arc disponible au rayon rText
+  const usableArc = rText * effectiveRad * ARC_USAGE;
 
-  // Boucle d’ajustement : on wrap sur 3 lignes et on réduit la police
-  // jusqu’à ce que ça tienne en largeur ET hauteur (évite l’ellipse)
-  function splitLinesByWidth(text, maxCharsPerLine, maxLines = 3) {
+  // split 2–3 lignes selon une largeur max estimée
+  function splitLinesByWidth(text, maxPerLine, maxLines = 3) {
     const words = (text || "").trim().split(/\s+/);
     if (!words[0]) return [""];
     const lines = [""];
@@ -3078,7 +3085,7 @@ const rText = startR + RATIO * (endR - startR);
     for (const w of words) {
       const cur = lines[li];
       const sep = cur ? " " : "";
-      if ((cur + sep + w).length > maxCharsPerLine && li < maxLines - 1) {
+      if ((cur + sep + w).length > maxPerLine && li < maxLines - 1) {
         li++;
         lines[li] = w;
       } else {
@@ -3088,44 +3095,39 @@ const rText = startR + RATIO * (endR - startR);
     return lines;
   }
 
-  let fontSize = Math.max(8, Math.round(outerRadius * 0.066)); // base
+  // boucle d’ajustement : wrap + réduction police jusqu’à tenir en largeur ET hauteur
+  let fontSize = Math.max(8, Math.round(outerRadius * 0.066));
   let lines = [];
   for (let iter = 0; iter < 10; iter++) {
-    const charW = fontSize * 0.50;                        // largeur moyenne ~0.50 (plus permissif)
-    const maxCharsPerLine = Math.max(6, Math.floor((usableArc * 0.98) / charW)); // 98% de l’arc
+    const charW = fontSize * CHAR_WIDTH_COEFF;
+    let maxCharsPerLine = Math.max(6, Math.floor(usableArc / charW));
     lines = splitLinesByWidth(name, maxCharsPerLine, 3);
 
-    // re-check largeur/hauteur avec cette police
+    // si encore trop large, on force davantage le wrap (réduit largeur par ligne)
     const widest = Math.max(...lines.map(l => l.length)) * charW;
-    const lineH  = fontSize * 0.98;                       // interligne serré
-    const height = lineH * lines.length;
-
-    const fitsWidth  = widest <= usableArc;
-    const fitsHeight = height <= thickness * 0.98;
-
-    // si c'est trop large → on ajoute une ligne (jusqu’à 3) en resserrant maxChars
-    if (!fitsWidth && lines.length < 3) {
-      const tighterMax = Math.max(6, Math.floor((usableArc * 0.90) / charW));
-      lines = splitLinesByWidth(name, tighterMax, 3);
+    if (widest > usableArc && lines.length < 3) {
+      maxCharsPerLine = Math.max(6, Math.floor((usableArc * 0.9) / charW));
+      lines = splitLinesByWidth(name, maxCharsPerLine, 3);
     }
 
-    // recalculs après éventuel re-wrap
-    const widest2 = Math.max(...lines.map(l => l.length)) * charW;
-    const fitsWidth2  = widest2 <= usableArc;
+    const lineH = fontSize * LINE_HEIGHT_SCALE;
+    const height = lineH * lines.length;
+    const fitsWidth  = Math.max(...lines.map(l => l.length)) * charW <= usableArc;
+    const fitsHeight = height <= thickness * HEIGHT_USAGE;
 
-    if (fitsWidth2 && fitsHeight) break;
-    fontSize = Math.max(8, Math.floor(fontSize * 0.92)); // ↓8% et on ré-essaie
+    if (fitsWidth && fitsHeight) break;
+    fontSize = Math.max(8, Math.floor(fontSize * 0.92)); // shrink et on recommence
   }
 
-  // centrage vertical (léger biais vers l’extérieur pour “coller” visuellement au bord)
-  const lineH = fontSize * 0.98;
-  const startDy = -((lines.length - 1) / 2) * lineH + (fontSize * 0.04);
+  // centrage vertical précis + petit biais visuel
+  const lineH = fontSize * LINE_HEIGHT_SCALE;
+  const startDy = -((lines.length - 1) / 2) * lineH + VERT_BIAS_PX;
 
   return (
     <text
       x={x0}
       y={y0}
-      transform={`rotate(${rotateDeg} ${x0} ${y0})`}
+      transform={`rotate(${-angleDeg + (flip ? 180 : 0)} ${x0} ${y0})`}
       fill="#ffffff"
       fontSize={fontSize}
       fontWeight="600"
@@ -3141,6 +3143,7 @@ const rText = startR + RATIO * (endR - startR);
     </text>
   );
 };
+
 
 
   // ----- Chargements -----
