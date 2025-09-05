@@ -2956,7 +2956,7 @@ function RolePage() {
     return { start, end };
   };
 
-  // ==== Icônes blanches au centre (un peu plus grandes) ====
+  // ==== Icônes blanches au centre (légèrement plus grandes) ====
   const renderCategoryIconLabel = (props) => {
     const { cx, cy, innerRadius, outerRadius, midAngle, name } = props;
     const r = (innerRadius + outerRadius) / 2;
@@ -2964,8 +2964,8 @@ function RolePage() {
     const x = cx + r * Math.cos(rad);
     const y = cy + r * Math.sin(rad);
 
-    // ↑ taille icône (0.22 au lieu de 0.20)
-    const S = Math.max(8, outerRadius * 0.22);
+    // taille icône
+    const S = Math.max(8, outerRadius * 0.23);
 
     const Gear = () => {
       const teeth = Array.from({ length: 6 });
@@ -2995,7 +2995,7 @@ function RolePage() {
       </g>
     );
 
-    // Business impact pivotée à 180° (rotation, pas de miroir)
+    // Business impact pivotée à 180°
     const ChartUp = () => (
       <g transform={`translate(${x},${y}) rotate(180)`} style={{ pointerEvents: "none" }}>
         <path d={`M ${-S * 0.48} ${S * 0.30} L ${-S * 0.48} ${-S * 0.30} L ${S * 0.48} ${-S * 0.30}`} stroke="#fff" strokeWidth={S * 0.08} fill="none" />
@@ -3009,7 +3009,7 @@ function RolePage() {
     return <ChartUp />; // Business impact
   };
 
-  // ---------- Wrapping sur 3 lignes ----------
+  // ---------- Split sur 3 lignes (fallback) ----------
   function splitLinesByWidth(text, maxCharsPerLine, maxLines = 3) {
     const words = (text || "").trim().split(/\s+/);
     if (!words[0]) return [""];
@@ -3025,6 +3025,7 @@ function RolePage() {
         lines[li] = (cur + sep + w).trim();
       }
     }
+    // Ellipsis en tout dernier recours
     if (lines.length === maxLines && lines[maxLines - 1].length > maxCharsPerLine) {
       const s = lines[maxLines - 1];
       lines[maxLines - 1] = (s.slice(0, Math.max(0, maxCharsPerLine - 1)) + "…").trim();
@@ -3032,26 +3033,26 @@ function RolePage() {
     return lines;
   }
 
-  // Label radial externe : marges + serrage ajustés pour rester dans SA part
+  // ---------- Labels externes : centrés et sans débordement ----------
   const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
     const { cx, cy, midAngle, name, index, innerRadius, outerRadius } = props;
 
-    // largeur angulaire du slice
+    // largeur angulaire brute du slice
     const anglePerSlice = total > 0 ? 120 / total : 0;
 
-    // On augmente légèrement le padding angulaire pour éviter le débordement
-    const anglePadding = 6; // deg (avant 4)
+    // petite marge angulaire pour ne pas mordre les séparations
+    const anglePadding = 5; // degrés
     const effectiveDeg = Math.max(0, anglePerSlice - anglePadding * 2);
     const effectiveRad = (effectiveDeg * Math.PI) / 180;
 
-    // Marges radiales : plus petites (on "colle" plus au centre/extérieur)
-    const paddingR = Math.max(4, Math.round(outerRadius * 0.02)); // avant 0.025
+    // marges radiales (petites pour "remplir" la part)
+    const paddingR = Math.max(4, Math.round(outerRadius * 0.018));
     const startR = innerRadius + paddingR;
     const endR   = outerRadius - paddingR;
     const thickness = Math.max(8, endR - startR);
     const rMid = (startR + endR) / 2;
 
-    // Position
+    // position (milieu du slice)
     let flip = false;
     if (category === "Business impact") flip = true;
     else if (category === "Technical" && index >= Math.ceil(total / 2)) flip = true;
@@ -3061,36 +3062,30 @@ function RolePage() {
     const x0 = cx + rMid * Math.cos(ang);
     const y0 = cy + rMid * Math.sin(ang);
 
-    // Capacité de l'arc dispo au rayon rMid
-    const availableArc = rMid * effectiveRad;
+    // longueur d'arc utilisable au rayon rMid
+    const usableArc = rMid * effectiveRad; // pixels
 
-    // Police de base + facteur de sécurité (réduit légèrement)
-    let fontSize = Math.max(8, Math.round(outerRadius * 0.068));
-    const charW = fontSize * 0.58;
-
-    // on réduit un peu la largeur utilisable (pour rester bien dans la part)
-    let maxCharsPerLine = Math.max(5, Math.floor((availableArc * 0.88) / charW)); // 0.88 au lieu de 0.92
-
-    let lines = splitLinesByWidth(name, maxCharsPerLine, 3);
-
-    // Interligne un peu plus serré
-    let lineHeight = fontSize * 0.98;
-    let totalHeight = lineHeight * lines.length;
-
-    // Si ça dépasse en hauteur, on réduit la police
-    if (totalHeight > thickness * 0.92) {
-      const scale = (thickness * 0.92) / totalHeight;
-      fontSize = Math.max(8, Math.floor(fontSize * scale));
-      const charW2 = fontSize * 0.58;
-      maxCharsPerLine = Math.max(5, Math.floor((availableArc * 0.88) / charW2));
+    // boucle d'ajustement : on réduit la police jusqu'à ce que ça tienne (largeur + hauteur)
+    let fontSize = Math.max(8, Math.round(outerRadius * 0.066)); // base
+    let lines = [];
+    for (let iter = 0; iter < 8; iter++) {
+      const charW = fontSize * 0.56;                   // largeur moyenne d'un caractère
+      const maxCharsPerLine = Math.max(5, Math.floor((usableArc * 0.95) / charW)); // 95% de l'arc
       lines = splitLinesByWidth(name, maxCharsPerLine, 3);
-      lineHeight = fontSize * 0.98;
-      totalHeight = lineHeight * lines.length;
+
+      const widest = Math.max(...lines.map(l => l.length)) * charW;
+      const height = fontSize * 1.0 * lines.length;    // interligne serré
+
+      const fitsWidth  = widest <= usableArc;
+      const fitsHeight = height <= thickness * 0.98;
+
+      if (fitsWidth && fitsHeight) break;
+      fontSize = Math.max(8, Math.floor(fontSize * 0.92)); // ↓8% et on ré-essaie
     }
 
-    // Centrage vertical plus “serré” (marges réduites)
-    const dyPx = lineHeight;
-    const startDy = -((lines.length - 1) / 2) * dyPx * 0.92; // 0.92 pour réduire la marge visuelle
+    // centrage vertical exact
+    const lineH = fontSize * 1.0;
+    const startDy = -((lines.length - 1) / 2) * lineH;
 
     return (
       <text
@@ -3105,7 +3100,7 @@ function RolePage() {
         pointerEvents="none"
       >
         {lines.map((line, i) => (
-          <tspan key={i} x={x0} dy={i === 0 ? `${startDy}px` : `${dyPx}px`}>
+          <tspan key={i} x={x0} dy={i === 0 ? `${startDy}px` : `${lineH}px`}>
             {line}
           </tspan>
         ))}
@@ -3271,7 +3266,7 @@ function RolePage() {
                   ))}
                 </Pie>
 
-                {/* Anneau extérieur — labels bien contenus dans leur part */}
+                {/* Anneau extérieur — labels bien contenus et centrés */}
                 {CAT_ORDER.map((cat) => {
                   const list = byCat[cat] || [];
                   if (!list.length) return null;
@@ -3376,6 +3371,7 @@ function RolePage() {
     </section>
   );
 }
+
 
 
 
