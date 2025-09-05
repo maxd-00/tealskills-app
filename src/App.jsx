@@ -993,23 +993,6 @@ function Global() {
   const CAL = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const idx = useMemo(() => Object.fromEntries(CAL.map((m,i)=>[m,i])), []);
 
-  // Tick Y personnalisé : chiffres verticaux + petite police
-  const VerticalYAxisTick = ({ x, y, payload, fontSize = 10, fill = "#334155" }) => (
-    <g transform={`translate(${x},${y})`}>
-      <text
-        x={0}
-        y={0}
-        dy={4}
-        textAnchor="middle"
-        fill={fill}
-        fontSize={fontSize}
-        transform="rotate(-90)"
-      >
-        {payload?.value}
-      </text>
-    </g>
-  );
-
   // Charger les années
   useEffect(() => {
     (async () => {
@@ -1089,18 +1072,14 @@ function Global() {
         <ResponsiveContainer width="100%" height={2000}>
           <LineChart data={chartData} margin={{ top: 10, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" ticks={CAL} />
-            <YAxis
-              allowDecimals={false}
-              tick={<VerticalYAxisTick fontSize={10} />}  // ← vertical + petite police
-              tickLine={false}
-              axisLine={{ stroke: "#e2e8f0" }}
-              width={50}                                  // ← un peu d’espace pour les ticks rotés
-            />
+            {/* Axe X prend toute la largeur */}
+            <XAxis dataKey="month" ticks={CAL} interval={0} />
+            {/* Axe Y masqué */}
+            <YAxis hide />
             <Tooltip />
             {/* Courbe cumulée */}
             <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={true} />
-            {/* Target (rouge) et Last Year (vert) */}
+            {/* Target et Last Year */}
             <ReferenceLine y={Number(yearMeta.target || 0)} stroke="red" strokeDasharray="4 4" />
             <ReferenceLine y={Number(yearMeta.last_year || 0)} stroke="green" strokeDasharray="4 4" />
           </LineChart>
@@ -1122,6 +1101,7 @@ function Global() {
     </section>
   );
 }
+
 
 
 
