@@ -3033,80 +3033,114 @@ function RolePage() {
     return lines;
   }
 
-  // ---------- Labels externes : centrés et sans débordement ----------
-  const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
-    const { cx, cy, midAngle, name, index, innerRadius, outerRadius } = props;
+// Label radial externe : plus proche du bord + wrap sans ellipse dès que possible
+const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
+  const { cx, cy, midAngle, name, index, innerRadius, outerRadius } = props;
 
-    // largeur angulaire brute du slice
-    const anglePerSlice = total > 0 ? 120 / total : 0;
+  // largeur angulaire d’un slice de la catégorie (120° / n)
+  const anglePerSlice = total > 0 ? 120 / total : 0;
 
-    // petite marge angulaire pour ne pas mordre les séparations
-    const anglePadding = 5; // degrés
-    const effectiveDeg = Math.max(0, anglePerSlice - anglePadding * 2);
-    const effectiveRad = (effectiveDeg * Math.PI) / 180;
+  // ↓ marge angulaire pour utiliser plus l’arc (mais éviter les séparateurs)
+  const anglePadding = 3; // deg (était 5/6)
+  const effectiveDeg = Math.max(0, anglePerSlice - anglePadding * 2);
+  const effectiveRad = (effectiveDeg * Math.PI) / 180;
 
-    // marges radiales (petites pour "remplir" la part)
-    const paddingR = Math.max(4, Math.round(outerRadius * 0.018));
-    const startR = innerRadius + paddingR;
-    const endR   = outerRadius - paddingR;
-    const thickness = Math.max(8, endR - startR);
-    const rMid = (startR + endR) / 2;
+  // ↓ marges radiales, et on place le texte près du bord extérieur
+  const paddingR = Math.max(3, Math.round(outerRadius * 0.015)); // était ~0.018–0.025
+  const startR   = innerRadius + paddingR;
+  const endR     = outerRadius - paddingR;
+  const thickness = Math.max(8, endR - startR);
 
-    // position (milieu du slice)
-    let flip = false;
-    if (category === "Business impact") flip = true;
-    else if (category === "Technical" && index >= Math.ceil(total / 2)) flip = true;
+  // position radiale du label – collé vers l'extérieur
+  const rText = endR - Math.max(4, outerRadius * 0.01);
 
-    const rotateDeg = -midAngle + (flip ? 180 : 0);
-    const ang = (-midAngle * Math.PI) / 180;
-    const x0 = cx + rMid * Math.cos(ang);
-    const y0 = cy + rMid * Math.sin(ang);
+  // position angulaire (milieu du slice), flip côté bas/haut
+  let flip = false;
+  if (category === "Business impact") flip = true;
+  else if (category === "Technical" && index >= Math.ceil(total / 2)) flip = true;
 
-    // longueur d'arc utilisable au rayon rMid
-    const usableArc = rMid * effectiveRad; // pixels
+  const rotateDeg = -midAngle + (flip ? 180 : 0);
+  const ang = (-midAngle * Math.PI) / 180;
+  const x0 = cx + rText * Math.cos(ang);
+  const y0 = cy + rText * Math.sin(ang);
 
-    // boucle d'ajustement : on réduit la police jusqu'à ce que ça tienne (largeur + hauteur)
-    let fontSize = Math.max(8, Math.round(outerRadius * 0.066)); // base
-    let lines = [];
-    for (let iter = 0; iter < 8; iter++) {
-      const charW = fontSize * 0.56;                   // largeur moyenne d'un caractère
-      const maxCharsPerLine = Math.max(5, Math.floor((usableArc * 0.95) / charW)); // 95% de l'arc
-      lines = splitLinesByWidth(name, maxCharsPerLine, 3);
+  // longueur d'arc utilisable au rayon rText
+  const usableArc = rText * effectiveRad;
 
-      const widest = Math.max(...lines.map(l => l.length)) * charW;
-      const height = fontSize * 1.0 * lines.length;    // interligne serré
+  // Boucle d’ajustement : on wrap sur 3 lignes et on réduit la police
+  // jusqu’à ce que ça tienne en largeur ET hauteur (évite l’ellipse)
+  function splitLinesByWidth(text, maxCharsPerLine, maxLines = 3) {
+    const words = (text || "").trim().split(/\s+/);
+    if (!words[0]) return [""];
+    const lines = [""];
+    let li = 0;
+    for (const w of words) {
+      const cur = lines[li];
+      const sep = cur ? " " : "";
+      if ((cur + sep + w).length > maxCharsPerLine && li < maxLines - 1) {
+        li++;
+        lines[li] = w;
+      } else {
+        lines[li] = (cur + sep + w).trim();
+      }
+    }
+    return lines;
+  }
 
-      const fitsWidth  = widest <= usableArc;
-      const fitsHeight = height <= thickness * 0.98;
+  let fontSize = Math.max(8, Math.round(outerRadius * 0.066)); // base
+  let lines = [];
+  for (let iter = 0; iter < 10; iter++) {
+    const charW = fontSize * 0.50;                        // largeur moyenne ~0.50 (plus permissif)
+    const maxCharsPerLine = Math.max(6, Math.floor((usableArc * 0.98) / charW)); // 98% de l’arc
+    lines = splitLinesByWidth(name, maxCharsPerLine, 3);
 
-      if (fitsWidth && fitsHeight) break;
-      fontSize = Math.max(8, Math.floor(fontSize * 0.92)); // ↓8% et on ré-essaie
+    // re-check largeur/hauteur avec cette police
+    const widest = Math.max(...lines.map(l => l.length)) * charW;
+    const lineH  = fontSize * 0.98;                       // interligne serré
+    const height = lineH * lines.length;
+
+    const fitsWidth  = widest <= usableArc;
+    const fitsHeight = height <= thickness * 0.98;
+
+    // si c'est trop large → on ajoute une ligne (jusqu’à 3) en resserrant maxChars
+    if (!fitsWidth && lines.length < 3) {
+      const tighterMax = Math.max(6, Math.floor((usableArc * 0.90) / charW));
+      lines = splitLinesByWidth(name, tighterMax, 3);
     }
 
-    // centrage vertical exact
-    const lineH = fontSize * 1.0;
-    const startDy = -((lines.length - 1) / 2) * lineH;
+    // recalculs après éventuel re-wrap
+    const widest2 = Math.max(...lines.map(l => l.length)) * charW;
+    const fitsWidth2  = widest2 <= usableArc;
 
-    return (
-      <text
-        x={x0}
-        y={y0}
-        transform={`rotate(${rotateDeg} ${x0} ${y0})`}
-        fill="#ffffff"
-        fontSize={fontSize}
-        fontWeight="600"
-        textAnchor="middle"
-        dominantBaseline="central"
-        pointerEvents="none"
-      >
-        {lines.map((line, i) => (
-          <tspan key={i} x={x0} dy={i === 0 ? `${startDy}px` : `${lineH}px`}>
-            {line}
-          </tspan>
-        ))}
-      </text>
-    );
-  };
+    if (fitsWidth2 && fitsHeight) break;
+    fontSize = Math.max(8, Math.floor(fontSize * 0.92)); // ↓8% et on ré-essaie
+  }
+
+  // centrage vertical (léger biais vers l’extérieur pour “coller” visuellement au bord)
+  const lineH = fontSize * 0.98;
+  const startDy = -((lines.length - 1) / 2) * lineH + (fontSize * 0.04);
+
+  return (
+    <text
+      x={x0}
+      y={y0}
+      transform={`rotate(${rotateDeg} ${x0} ${y0})`}
+      fill="#ffffff"
+      fontSize={fontSize}
+      fontWeight="600"
+      textAnchor="middle"
+      dominantBaseline="central"
+      pointerEvents="none"
+    >
+      {lines.map((line, i) => (
+        <tspan key={i} x={x0} dy={i === 0 ? `${startDy}px` : `${lineH}px`}>
+          {line}
+        </tspan>
+      ))}
+    </text>
+  );
+};
+
 
   // ----- Chargements -----
   useEffect(() => {
