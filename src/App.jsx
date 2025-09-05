@@ -3040,8 +3040,8 @@ const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
 
   // ========= PARAMÈTRES REGLABLES =========
   const RATIO = 0.50;              // 0 = bord intérieur, 1 = bord extérieur (distance radiale)
-  const ANGLE_PADDING_DEG = 1.5;     // marge angulaire de chaque côté du slice (évite les séparateurs)
-  const ARC_BIAS = 0.40;           // -1 → vers le début du slice, +1 → vers la fin (position le long de l’arc)
+  const ANGLE_PADDING_DEG = 2;     // marge angulaire de chaque côté du slice (évite les séparateurs)
+  const ARC_BIAS = 0.25;           // -1 → vers le début du slice, +1 → vers la fin (position le long de l’arc)
   const ARC_USAGE = 0.98;          // proportion de la longueur d’arc utilisable (0–1)
   const RADIAL_PADDING_PX = 3;     // petite marge radiale pour ne pas toucher les bords
   const HEIGHT_USAGE = 0.98;       // proportion de l’épaisseur d’anneau exploitable (0–1)
