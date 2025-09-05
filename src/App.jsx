@@ -1067,16 +1067,17 @@ function Global() {
 
       <div className="text-slate-600">{yearTitle}</div>
 
-      {/* Hauteur visible en un coup d'œil (ajuste 60vh -> 55vh/65vh si besoin) */}
+      {/* Hauteur visible en un coup d'œil */}
       <div className="bg-white rounded-2xl shadow p-4" style={{ height: "60vh" }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 10, right: 16, bottom: 8, left: 0 }}>
+          <LineChart data={chartData} margin={{ top: 10, right: 16, bottom: 8, left: 8 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            {/* Axe X : police réduite */}
+            {/* Axe X : padding pour éviter la coupe de "Jan" + police réduite */}
             <XAxis
               dataKey="month"
               ticks={CAL}
               interval={0}
+              padding={{ left: 12, right: 12 }}   // ← empêche la coupe du 1er/dernier tick
               tick={{ fontSize: 10, fill: "#334155" }}
               tickLine={false}
               axisLine={{ stroke: "#e2e8f0" }}
@@ -1093,21 +1094,25 @@ function Global() {
         </ResponsiveContainer>
       </div>
 
-      {/* Légende */}
-      <div className="flex gap-4 text-sm text-slate-600">
-        <div className="flex items-center gap-1">
-          <span className="w-4 h-1 bg-[#2563eb] inline-block"></span> Cumulative Value
+      {/* Légende centrée avec espacements égaux */}
+      <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-1 bg-[#2563eb] inline-block"></span>
+          <span>Cumulative Value</span>
         </div>
-        <div className="flex items-center gap-1">
-          <span className="w-4 h-1 bg-red-500 inline-block"></span> Target
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-1 bg-red-500 inline-block"></span>
+          <span>Target</span>
         </div>
-        <div className="flex items-center gap-1">
-          <span className="w-4 h-1 bg-green-500 inline-block"></span> Last Year
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-1 bg-green-500 inline-block"></span>
+          <span>Last Year</span>
         </div>
       </div>
     </section>
   );
 }
+
 
 
 
