@@ -1119,11 +1119,12 @@ function Admin() {
   const [tab, setTab] = useState("okr"); // okr | global | roles | employee
 
   return (
-<section className="h-[calc(100dvh-64px)] flex flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+8px)] overflow-hidden overflow-x-hidden">
-      <header className="pb-2">
-        <h1 className="text-xl md:text-2xl font-bold text-[#057e7f] mb-2">Admin</h1>
-        {/* ✅ onglets qui wrap sur mobile */}
-        <div className="flex flex-wrap gap-2 bg-slate-100 rounded-full p-1">
+    // Hauteur plein écran desktop (en supposant un header ~64px)
+    <section className="h-[calc(100vh-64px)] flex flex-col px-8 pb-6 overflow-hidden">
+      {/* Titre + onglets (pas de wrap mobile, desktop only) */}
+      <header className="pb-4">
+        <h1 className="text-3xl font-bold text-[#057e7f] mb-3">Admin</h1>
+        <div className="flex gap-3 bg-slate-100 rounded-full p-1.5">
           {[
             { key: "okr", label: "OKR Management" },
             { key: "global", label: "Global Objectives" },
@@ -1133,10 +1134,12 @@ function Admin() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-3 md:px-4 py-1.5 rounded-full text-sm ${
-                tab === t.key ? "bg-[#057e7f] text-white shadow" : "bg-white text-[#057e7f]"
-              }`}
               type="button"
+              className={`px-5 py-2 rounded-full text-sm tracking-wide ${
+                tab === t.key
+                  ? "bg-[#057e7f] text-white shadow"
+                  : "bg-white text-[#057e7f] hover:bg-white/90"
+              }`}
             >
               {t.label}
             </button>
@@ -1144,6 +1147,7 @@ function Admin() {
         </div>
       </header>
 
+      {/* Zone de travail scrollable (desktop) */}
       <div className="flex-1 overflow-auto rounded-2xl">
         {tab === "okr" && <AdminOKR />}
         {tab === "global" && <AdminGlobal />}
@@ -1155,6 +1159,7 @@ function Admin() {
 }
 
 
+
 /* =============================
  * OKR Management — Versions / Employee OKRs
  * ============================= */
@@ -1162,9 +1167,10 @@ function AdminOKR() {
   const [subTab, setSubTab] = useState("versions"); // versions | employee | visualization
 
   return (
+    // Conteneur plein écran (dans la zone Admin), desktop only
     <div className="h-full flex flex-col">
-      {/* ✅ sous-onglets qui wrap sur mobile */}
-      <div className="mb-2 flex flex-wrap gap-2 bg-slate-100 rounded-full p-1 w-full">
+      {/* Barre de sous-onglets (desktop) */}
+      <div className="mb-4 flex gap-3 bg-slate-100 rounded-full p-1.5 w-fit">
         {[
           { key: "versions", label: "Versions" },
           { key: "employee", label: "Employee OKRs" },
@@ -1174,8 +1180,10 @@ function AdminOKR() {
             key={t.key}
             onClick={() => setSubTab(t.key)}
             type="button"
-            className={`px-3 md:px-4 py-1.5 rounded-full text-sm transition-colors ${
-              subTab === t.key ? "bg-[#057e7f] text-white shadow font-medium" : "bg-white text-[#057e7f]"
+            className={`px-5 py-2 rounded-full text-sm tracking-wide ${
+              subTab === t.key
+                ? "bg-[#057e7f] text-white shadow"
+                : "bg-white text-[#057e7f] hover:bg-white/90"
             }`}
           >
             {t.label}
@@ -1183,7 +1191,8 @@ function AdminOKR() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-auto">
+      {/* Zone de travail scrollable (hauteur max pour grands tableaux) */}
+      <div className="flex-1 overflow-auto rounded-2xl">
         {subTab === "versions" && <AdminOKR_Versions />}
         {subTab === "employee" && <AdminOKR_Employee />}
         {subTab === "visualization" && <AdminOKR_Visualization />}
@@ -1191,6 +1200,7 @@ function AdminOKR() {
     </div>
   );
 }
+
 
 
 
@@ -1207,7 +1217,10 @@ function AdminOKR_Versions() {
         .from("profiles")
         .select("id,email")
         .order("email", { ascending: true });
-      if (eu) { alert(`Load users failed: ${eu.message}`); return; }
+      if (eu) {
+        alert(`Load users failed: ${eu.message}`);
+        return;
+      }
       setUsers(u || []);
       setUserId(u?.[0]?.id || "");
     })();
@@ -1253,8 +1266,16 @@ function AdminOKR_Versions() {
 
   async function setActive(id) {
     try {
-      await supabase.from("okr_versions").update({ is_active: false }).eq("user_id", userId).neq("id", id);
-      await supabase.from("okr_versions").update({ is_active: true }).eq("id", id).eq("user_id", userId);
+      await supabase
+        .from("okr_versions")
+        .update({ is_active: false })
+        .eq("user_id", userId)
+        .neq("id", id);
+      await supabase
+        .from("okr_versions")
+        .update({ is_active: true })
+        .eq("id", id)
+        .eq("user_id", userId);
       await load();
       setToast("Active version updated");
       setTimeout(() => setToast(""), 1500);
@@ -1266,7 +1287,11 @@ function AdminOKR_Versions() {
   async function deleteVersion(id) {
     if (!confirm("Delete this version? This will remove its OKRs.")) return;
     try {
-      const { error } = await supabase.from("okr_versions").delete().eq("id", id).eq("user_id", userId);
+      const { error } = await supabase
+        .from("okr_versions")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
       if (error) throw error;
       await load();
       setToast("Version deleted");
@@ -1277,28 +1302,31 @@ function AdminOKR_Versions() {
   }
 
   return (
-    <div className="grid gap-4">
-      {/* Employee (responsive) */}
-      <div className="bg-white p-4 rounded-xl shadow grid gap-2">
-        <label className="grid gap-1 w-full">
-          <span className="text-sm text-slate-600">Employee</span>
+    <div className="grid gap-6">
+      {/* Sélecteur utilisateur */}
+      <div className="bg-white p-6 rounded-xl shadow flex items-center gap-4 w-full max-w-lg">
+        <label className="flex-1">
+          <span className="text-sm text-slate-600 block mb-1">Employee</span>
           <select
-            className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f] w-full max-w-full"
+            className="border rounded-md p-2 w-full bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
           >
-            {users.map(u => <option key={u.id} value={u.id}>{u.email}</option>)}
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.email}
+              </option>
+            ))}
           </select>
         </label>
       </div>
 
-      {/* Create a version (responsive) */}
-      <div className="bg-white p-4 rounded-xl shadow grid gap-3">
+      {/* Création de version */}
+      <div className="bg-white p-6 rounded-xl shadow grid gap-3 max-w-2xl">
         <div className="font-medium">Create a version for this employee</div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-stretch">
+        <div className="flex gap-3 items-center">
           <input
-            className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f] w-full min-w-0"
+            className="flex-1 border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
             placeholder="e.g., Q4 2025"
             value={newVersion}
             onChange={(e) => setNewVersion(e.target.value)}
@@ -1306,7 +1334,11 @@ function AdminOKR_Versions() {
           <button
             onClick={addVersion}
             disabled={!userId}
-            className={`px-4 py-3 rounded-full ${userId ? "bg-[#057e7f] text-white" : "bg-slate-200 text-slate-500 cursor-not-allowed"} w-full sm:w-auto`}
+            className={`px-5 py-2 rounded-full ${
+              userId
+                ? "bg-[#057e7f] text-white"
+                : "bg-slate-200 text-slate-500 cursor-not-allowed"
+            }`}
           >
             Add Version
           </button>
@@ -1314,37 +1346,41 @@ function AdminOKR_Versions() {
       </div>
 
       {/* Liste des versions */}
-      <div className="bg-white p-3 md:p-4 rounded-xl shadow">
-        <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh]">
-          <table className="min-w-[640px] w-full text-xs md:text-sm">
+      <div className="bg-white p-6 rounded-xl shadow">
+        <div className="overflow-auto max-h-[65vh]">
+          <table className="min-w-[720px] w-full text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="text-left p-2">Label</th>
-                <th className="text-left p-2">Status</th>
-                <th className="text-left p-2">Actions</th>
-                <th className="text-left p-2">Delete</th>
+                <th className="text-left p-3">Label</th>
+                <th className="text-left p-3">Status</th>
+                <th className="text-left p-3">Actions</th>
+                <th className="text-left p-3">Delete</th>
               </tr>
             </thead>
             <tbody>
               {versions.map((v) => (
                 <tr key={v.id} className="border-t">
-                  <td className="p-2">{v.label}</td>
-                  <td className="p-2">
+                  <td className="p-3">{v.label}</td>
+                  <td className="p-3">
                     {v.is_active ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">active</span>
-                    ) : ("")}
+                      <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs">
+                        active
+                      </span>
+                    ) : (
+                      ""
+                    )}
                   </td>
-                  <td className="p-2">
+                  <td className="p-3">
                     {!v.is_active && (
                       <button
-                        className="text-xs px-2 py-1 rounded-full bg-slate-100"
+                        className="px-3 py-1 text-xs rounded-full bg-slate-100 hover:bg-slate-200"
                         onClick={() => setActive(v.id)}
                       >
                         Set active
                       </button>
                     )}
                   </td>
-                  <td className="p-2">
+                  <td className="p-3">
                     <button
                       onClick={() => deleteVersion(v.id)}
                       className="text-red-600 bg-white rounded-full px-2 hover:bg-slate-50"
@@ -1357,7 +1393,7 @@ function AdminOKR_Versions() {
               ))}
               {versions.length === 0 && (
                 <tr>
-                  <td className="p-2 text-slate-500" colSpan={4}>
+                  <td className="p-3 text-slate-500" colSpan={4}>
                     No versions yet for this employee.
                   </td>
                 </tr>
@@ -1369,6 +1405,7 @@ function AdminOKR_Versions() {
     </div>
   );
 }
+
 
 
 function AdminOKR_Employee() {
@@ -1475,13 +1512,13 @@ function AdminOKR_Employee() {
   const allEmpty = grouped.every(g => g.rows.length === 0);
 
   return (
-    <div className="grid gap-4">
-      {/* Filtres responsive */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+    <div className="grid gap-6">
+      {/* Filtres (desktop) */}
+      <div className="bg-white p-6 rounded-xl shadow grid grid-cols-3 gap-4 items-end max-w-5xl">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Employee</span>
           <select
-            className="border rounded-md p-2 bg-white text-black w-full"
+            className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
             value={employeeId}
             onChange={(e) => setEmployeeId(e.target.value)}
           >
@@ -1493,10 +1530,10 @@ function AdminOKR_Employee() {
           </select>
         </label>
 
-        <label className="grid gap-1 md:col-span-2">
+        <label className="grid gap-1 col-span-2">
           <span className="text-sm text-slate-600">Version</span>
           <select
-            className="border rounded-md p-2 bg-white text-black w-full"
+            className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
             value={versionId}
             onChange={(e) => setVersionId(e.target.value)}
           >
@@ -1509,21 +1546,21 @@ function AdminOKR_Employee() {
         </label>
       </div>
 
-      {/* Visualisation */}
-      <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
-        <table className="min-w-[560px] w-full text-xs md:text-sm">
+      {/* Visualisation (desktop) */}
+      <div className="overflow-auto max-h-[65vh] bg-white rounded-2xl shadow">
+        <table className="min-w-[900px] w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="text-left p-2 w-44">Category</th>
-              <th className="text-left p-2">Description</th>
-              <th className="text-left p-2 w-40">Status</th>
-              <th className="text-left p-2 w-72">Notes</th>
+              <th className="text-left p-3 w-48">Category</th>
+              <th className="text-left p-3">Description</th>
+              <th className="text-left p-3 w-44">Status</th>
+              <th className="text-left p-3 w-[32rem]">Notes</th>
             </tr>
           </thead>
           <tbody>
             {allEmpty && (
               <tr>
-                <td className="p-2 text-slate-500" colSpan={4}>
+                <td className="p-3 text-slate-500" colSpan={4}>
                   No OKRs for this selection.
                 </td>
               </tr>
@@ -1533,7 +1570,7 @@ function AdminOKR_Employee() {
               <React.Fragment key={section.cat}>
                 {section.rows.length > 0 && (
                   <tr className="bg-slate-50/70">
-                    <td className="p-2 font-semibold text-slate-700" colSpan={4}>
+                    <td className="p-3 font-semibold text-slate-700" colSpan={4}>
                       {section.cat}
                     </td>
                   </tr>
@@ -1542,10 +1579,10 @@ function AdminOKR_Employee() {
                   const ans = answersMap[it.id] || {};
                   return (
                     <tr key={it.id} className="border-t align-top">
-                      <td className="p-2">{it.category}</td>
-                      <td className="p-2 whitespace-pre-wrap text-slate-800">{it.description || it.title}</td>
-                      <td className="p-2">{badge(ans.status)}</td>
-                      <td className="p-2 whitespace-pre-wrap text-slate-700">{ans.notes || "—"}</td>
+                      <td className="p-3">{it.category}</td>
+                      <td className="p-3 whitespace-pre-wrap text-slate-800">{it.description || it.title}</td>
+                      <td className="p-3">{badge(ans.status)}</td>
+                      <td className="p-3 whitespace-pre-wrap text-slate-700">{ans.notes || "—"}</td>
                     </tr>
                   );
                 })}
@@ -1559,20 +1596,21 @@ function AdminOKR_Employee() {
 }
 
 
+
 function AdminOKR_Visualization() {
-  const [users, setUsers] = useState([]);
   const [rows, setRows] = useState([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const { data: u, error: eu } = await supabase
+        // 1) Utilisateurs
+        const { data: users, error: eu } = await supabase
           .from("profiles")
           .select("id,email")
           .order("email");
         if (eu) throw eu;
-        setUsers(u || []);
 
+        // 2) Versions actives par utilisateur
         const { data: vers, error: ev } = await supabase
           .from("okr_versions")
           .select("id,user_id,is_active")
@@ -1582,36 +1620,46 @@ function AdminOKR_Visualization() {
         const activeByUser = new Map((vers || []).map(v => [v.user_id, v.id]));
         const activeVersionIds = Array.from(activeByUser.values());
         if (activeVersionIds.length === 0) {
-          setRows([]);
+          // Aucun actif -> lignes vides (mais on liste quand même les users)
+          const baseline = (users || []).map(u => ({
+            email: u.email,
+            client: "-",
+            myself: "-",
+            company: "-",
+          }));
+          baseline.sort((a, b) => a.email.localeCompare(b.email));
+          setRows(baseline);
           return;
         }
 
+        // 3) Items des versions actives (pour connaître la catégorie)
         const { data: items, error: ei } = await supabase
           .from("okr_items")
           .select("id,category,assigned_user_id,version_id")
           .in("version_id", activeVersionIds);
         if (ei) throw ei;
 
+        // 4) Réponses des utilisateurs sur ces versions actives
         const { data: answers, error: ea } = await supabase
           .from("user_okr_answers")
           .select("user_id,item_id,status,version_id")
           .in("version_id", activeVersionIds);
         if (ea) throw ea;
 
+        // Index & agrégation
+        const userMap = new Map((users || []).map(x => [x.id, x.email]));
         const itemsById = new Map((items || []).map(i => [i.id, i]));
-        const userMap   = new Map((u || []).map(x => [x.id, x.email]));
-        const perUser   = new Map(); // userEmail -> { Client:[], Myself:[], Company:[] }
+        const perUser = new Map(); // email -> { Client:[], Myself:[], Company:[] }
 
         for (const a of (answers || [])) {
           const it = itemsById.get(a.item_id);
           if (!it) continue;
+          // ne garder que la réponse correspondant à la version active de CE user
           const activeVid = activeByUser.get(a.user_id);
           if (!activeVid || activeVid !== a.version_id) continue;
 
           const email = userMap.get(a.user_id) || a.user_id;
-          if (!perUser.has(email)) {
-            perUser.set(email, { Client: [], Myself: [], Company: [] });
-          }
+          if (!perUser.has(email)) perUser.set(email, { Client: [], Myself: [], Company: [] });
           perUser.get(email)[it.category]?.push(a.status || "orange");
         }
 
@@ -1620,10 +1668,10 @@ function AdminOKR_Visualization() {
           arr.includes("orange") ? "orange" :
           arr.length ? "green" : "-";
 
-        const out = (u || []).map(user => {
-          const cats = perUser.get(user.email) || { Client: [], Myself: [], Company: [] };
+        const out = (users || []).map(u => {
+          const cats = perUser.get(u.email) || { Client: [], Myself: [], Company: [] };
           return {
-            email: user.email,
+            email: u.email,
             client:  agg(cats.Client),
             myself:  agg(cats.Myself),
             company: agg(cats.Company),
@@ -1641,9 +1689,9 @@ function AdminOKR_Visualization() {
 
   return (
     <div className="grid gap-4">
-<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
-  <table className="min-w-[720px] w-full text-xs md:text-sm">
-
+      {/* Tableau récapitulatif (desktop) */}
+      <div className="overflow-auto max-h-[65vh] bg-white rounded-2xl shadow">
+        <table className="min-w-[800px] w-full text-sm">
           <thead className="bg-slate-100 sticky top-0">
             <tr>
               <th className="text-left p-3">Email</th>
@@ -1671,6 +1719,8 @@ function AdminOKR_Visualization() {
           </tbody>
         </table>
       </div>
+
+      {/* Légende */}
       <div className="text-xs text-slate-500">
         Legend: <Badge status="green" /> — <Badge status="orange" /> — <Badge status="red" /> — <Badge status="-" />
       </div>
@@ -1678,11 +1728,14 @@ function AdminOKR_Visualization() {
   );
 }
 
+
 function AdminGlobal() {
   const [subTab, setSubTab] = useState("new"); // new | data
+
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-3 flex gap-2 bg-slate-100 rounded-full p-1 w-fit">
+      {/* Barre de sous-onglets desktop */}
+      <div className="mb-4 flex gap-3 bg-slate-100 rounded-full p-1.5 w-fit">
         {[
           { key: "new", label: "New" },
           { key: "data", label: "Data" },
@@ -1691,8 +1744,10 @@ function AdminGlobal() {
             key={t.key}
             onClick={() => setSubTab(t.key)}
             type="button"
-            className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
-              subTab === t.key ? "bg-[#057e7f] text-white shadow font-medium" : "bg-white text-[#057e7f]"
+            className={`px-5 py-2 rounded-full text-sm tracking-wide ${
+              subTab === t.key
+                ? "bg-[#057e7f] text-white shadow"
+                : "bg-white text-[#057e7f] hover:bg-white/90"
             }`}
           >
             {t.label}
@@ -1700,12 +1755,14 @@ function AdminGlobal() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-auto">
+      {/* Zone de travail scrollable */}
+      <div className="flex-1 overflow-auto rounded-2xl">
         {subTab === "new" ? <AdminGlobal_New /> : <AdminGlobal_Data />}
       </div>
     </div>
   );
 }
+
 
 function AdminGlobal_New() {
   const [years, setYears] = useState([]);
@@ -1782,64 +1839,62 @@ function AdminGlobal_New() {
   }
 
   return (
-    <div className="grid gap-4">
-      {/* Ligne d’ajout responsive */}
-      <div className="bg-white p-4 rounded-xl shadow grid gap-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          <input
-            className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
-            placeholder="Year (e.g. 2025)"
-            value={newYear.year}
-            onChange={(e) => setNewYear((s) => ({ ...s, year: e.target.value }))}
-          />
-          <input
-            className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
-            placeholder="Target"
-            value={newYear.target}
-            onChange={(e) => setNewYear((s) => ({ ...s, target: e.target.value }))}
-          />
-          <input
-            className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
-            placeholder="Last Year"
-            value={newYear.last_year}
-            onChange={(e) =>
-              setNewYear((s) => ({ ...s, last_year: e.target.value }))
-            }
-          />
-          <button
-            onClick={addYear}
-            className="px-4 py-3 rounded-full bg-[#057e7f] text-white hover:opacity-90 w-full"
-          >
-            Add Year
-          </button>
-        </div>
+    <div className="grid gap-6">
+      {/* Formulaire ajout année (desktop large) */}
+      <div className="bg-white p-6 rounded-xl shadow grid grid-cols-4 gap-4 max-w-5xl">
+        <input
+          className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
+          placeholder="Year (e.g. 2025)"
+          value={newYear.year}
+          onChange={(e) => setNewYear((s) => ({ ...s, year: e.target.value }))}
+        />
+        <input
+          className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
+          placeholder="Target"
+          value={newYear.target}
+          onChange={(e) => setNewYear((s) => ({ ...s, target: e.target.value }))}
+        />
+        <input
+          className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
+          placeholder="Last Year"
+          value={newYear.last_year}
+          onChange={(e) =>
+            setNewYear((s) => ({ ...s, last_year: e.target.value }))
+          }
+        />
+        <button
+          onClick={addYear}
+          className="px-4 py-3 rounded-full bg-[#057e7f] text-white hover:opacity-90"
+        >
+          Add Year
+        </button>
       </div>
 
-      {/* Existing years */}
-      <div className="bg-white p-4 rounded-xl shadow">
-        <div className="text-sm text-slate-600 mb-2">Existing years</div>
+      {/* Liste des années */}
+      <div className="bg-white p-6 rounded-xl shadow">
+        <div className="text-sm text-slate-600 mb-3">Existing years</div>
         {years.length === 0 ? (
           <div className="text-slate-500">No years yet.</div>
         ) : (
-          <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh]">
-            <table className="min-w-[680px] w-full text-xs md:text-sm">
+          <div className="overflow-auto max-h-[65vh]">
+            <table className="min-w-[800px] w-full text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="text-left p-2">Year</th>
-                  <th className="text-left p-2">Target</th>
-                  <th className="text-left p-2">Last Year</th>
-                  <th className="text-left p-2">Status</th>
-                  <th className="text-left p-2">Activity</th>
-                  <th className="text-left p-2">Delete</th>
+                  <th className="text-left p-3">Year</th>
+                  <th className="text-left p-3">Target</th>
+                  <th className="text-left p-3">Last Year</th>
+                  <th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Activity</th>
+                  <th className="text-left p-3">Delete</th>
                 </tr>
               </thead>
               <tbody>
                 {years.map((y) => (
                   <tr key={y.id} className="border-t">
-                    <td className="p-2">{y.year}</td>
-                    <td className="p-2">{y.target}</td>
-                    <td className="p-2">{y.last_year}</td>
-                    <td className="p-2">
+                    <td className="p-3">{y.year}</td>
+                    <td className="p-3">{y.target}</td>
+                    <td className="p-3">{y.last_year}</td>
+                    <td className="p-3">
                       {y.is_active ? (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
                           active
@@ -1848,11 +1903,11 @@ function AdminGlobal_New() {
                         ""
                       )}
                     </td>
-                    <td className="p-2">
+                    <td className="p-3">
                       {!y.is_active ? (
                         <button
                           onClick={() => setActiveYear(y.id)}
-                          className="text-xs px-2 py-1 rounded-full bg-white text-[#057e7f] hover:bg-slate-50"
+                          className="text-xs px-3 py-1 rounded-full bg-white text-[#057e7f] hover:bg-slate-50"
                         >
                           Set active
                         </button>
@@ -1860,7 +1915,7 @@ function AdminGlobal_New() {
                         <span className="text-xs text-slate-500">—</span>
                       )}
                     </td>
-                    <td className="p-2">
+                    <td className="p-3">
                       <button
                         onClick={() => deleteYear(y.id)}
                         className="text-red-600 bg-white rounded-full px-2 hover:bg-slate-50"
@@ -1881,6 +1936,7 @@ function AdminGlobal_New() {
 }
 
 
+
 function AdminGlobal_Data() {
   const [years, setYears] = useState([]);
   const [yearId, setYearId] = useState("");
@@ -1891,6 +1947,7 @@ function AdminGlobal_Data() {
   const idx = Object.fromEntries(CAL.map((m, i) => [m, i]));
 
   useEffect(() => { loadYears(); }, []);
+
   async function loadYears() {
     try {
       const { data, error } = await supabase
@@ -1909,6 +1966,7 @@ function AdminGlobal_Data() {
   }
 
   useEffect(() => { if (yearId) loadMonths(yearId); }, [yearId]);
+
   async function loadMonths(yid) {
     try {
       const { data, error } = await supabase
@@ -1934,18 +1992,19 @@ function AdminGlobal_Data() {
         if (error) throw error;
       }
       setToast("Saved");
-      setTimeout(() => setToast(""), 2000);
+      setTimeout(() => setToast(""), 1800);
     } catch (e) {
       alert(`Save months failed: ${e.message}`);
     }
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="flex items-center gap-2">
+    <div className="grid gap-6">
+      {/* Sélecteur d'année (desktop) */}
+      <div className="bg-white p-6 rounded-xl shadow flex items-center gap-4 w-full max-w-lg">
         <span className="text-sm text-slate-600">Year</span>
         <select
-          className="border rounded-md p-2 bg-white text-black"
+          className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
           value={yearId}
           onChange={(e) => setYearId(e.target.value)}
         >
@@ -1957,21 +2016,21 @@ function AdminGlobal_Data() {
         </select>
       </div>
 
-<div className="bg-white p-3 md:p-4 rounded-xl shadow">
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[56vh] md:max-h-[60vh] overflow-auto pr-1">
-
-          {months.map((m, idx2) => (
-            <label key={m.id} className="flex items-center gap-2">
-              <span className="w-10">{m.month}</span>
+      {/* Grille des mois (desktop large) */}
+      <div className="bg-white p-6 rounded-xl shadow">
+        <div className="grid grid-cols-3 gap-4 max-h-[65vh] overflow-auto pr-1">
+          {months.map((m, i) => (
+            <label key={m.id} className="flex items-center gap-3">
+              <span className="w-14 shrink-0 font-medium">{m.month}</span>
               <input
-                className="border rounded-md p-2 flex-1 bg-white text-black"
+                className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] flex-1"
                 type="number"
                 value={m.value}
                 onChange={(e) => {
                   const v = Number(e.target.value || 0);
                   setMonths((list) => {
                     const next = [...list];
-                    next[idx2] = { ...next[idx2], value: v };
+                    next[i] = { ...next[i], value: v };
                     return next;
                   });
                 }}
@@ -1979,15 +2038,16 @@ function AdminGlobal_Data() {
             </label>
           ))}
           {months.length === 0 && (
-            <div className="text-slate-500">No data for this year.</div>
+            <div className="text-slate-500 col-span-3">No data for this year.</div>
           )}
         </div>
       </div>
 
-      <div>
+      {/* Actions */}
+      <div className="flex gap-3">
         <button
           onClick={saveMonths}
-          className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90"
+          className="px-5 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90"
         >
           Save
         </button>
@@ -1995,6 +2055,7 @@ function AdminGlobal_Data() {
     </div>
   );
 }
+
 
 function AdminView() {
   const [versions, setVersions] = useState([]);
@@ -2204,12 +2265,12 @@ function Badge({ status }) {
  * Admin — Roles (container + sous-onglets)
  * ============================= */
 function AdminRoles() {
-  const [subTab, setSubTab] = useState("defs"); // comp | defs | assign
+  const [subTab, setSubTab] = useState("defs"); // defs | comp | assign
 
   return (
     <section className="h-full flex flex-col">
-      {/* ✅ wrap sur mobile */}
-      <div className="mb-3 flex flex-wrap gap-2 bg-slate-100 rounded-full p-1 w-full">
+      {/* Barre de sous-onglets desktop */}
+      <div className="mb-4 flex gap-3 bg-slate-100 rounded-full p-1.5 w-fit">
         {[
           { key: "defs",  label: "Definition of roles" },
           { key: "comp",  label: "Role competencies" },
@@ -2218,24 +2279,28 @@ function AdminRoles() {
           <button
             key={t.key}
             onClick={() => setSubTab(t.key)}
-            className={`px-4 py-1.5 rounded-full text-sm ${
-              subTab === t.key ? "bg-[#057e7f] text-white shadow" : "bg-white text-[#057e7f]"
-            }`}
             type="button"
+            className={`px-5 py-2 rounded-full text-sm tracking-wide ${
+              subTab === t.key
+                ? "bg-[#057e7f] text-white shadow"
+                : "bg-white text-[#057e7f] hover:bg-white/90"
+            }`}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 overflow-auto">
-        {subTab === "comp"   && <AdminRoles_Description />}
+      {/* Zone de travail scrollable */}
+      <div className="flex-1 overflow-auto rounded-2xl">
         {subTab === "defs"   && <AdminRoles_Definition />}
+        {subTab === "comp"   && <AdminRoles_Description />}
         {subTab === "assign" && <AdminRoles_Assign />}
       </div>
     </section>
   );
 }
+
 
 
 /* =============================
@@ -2321,9 +2386,9 @@ function AdminRoles_Description() {
 
   return (
     <div className="grid gap-6">
-      {/* Formulaire responsive */}
-      <div className="bg-white p-4 rounded-2xl shadow grid gap-3">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      {/* Formulaire desktop */}
+      <div className="bg-white p-6 rounded-xl shadow grid gap-4 max-w-6xl">
+        <div className="grid grid-cols-4 gap-4">
           <label className="grid gap-1">
             <span className="text-sm text-slate-600">Role</span>
             <select
@@ -2351,10 +2416,10 @@ function AdminRoles_Description() {
             </select>
           </label>
 
-          <label className="grid gap-1 md:col-span-2">
+          <label className="grid gap-1 col-span-2">
             <span className="text-sm text-slate-600">Competency (short)</span>
             <input
-              className="border rounded-md p-2 bg-white text-black border-[#057e7f] w-full min-w-0"
+              className="border rounded-md p-2 bg-white text-black border-[#057e7f] w-full"
               placeholder="e.g. Stakeholder management"
               value={competency}
               onChange={(e) => setCompetency(e.target.value)}
@@ -2378,31 +2443,31 @@ function AdminRoles_Description() {
         <button
           onClick={addItem}
           disabled={!role}
-          className={`px-4 py-2 rounded-full ${
+          className={`px-5 py-2 rounded-full ${
             role ? "bg-[#057e7f] text-white hover:opacity-90" : "bg-slate-200 text-slate-500 cursor-not-allowed"
-          } w-full sm:w-auto`}
+          } w-fit`}
         >
           Add competency
         </button>
       </div>
 
-      {/* Liste */}
-      <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
-        <table className="min-w-[840px] w-full text-xs md:text-sm">
+      {/* Tableau desktop */}
+      <div className="overflow-auto max-h-[65vh] bg-white rounded-2xl shadow">
+        <table className="min-w-[1000px] w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="text-left p-2">Role</th>
-              <th className="text-left p-2">Category</th>
-              <th className="text-left p-2">Competency</th>
-              <th className="text-left p-2">Description</th>
-              <th className="text-left p-2 w-32">Actions</th>
+              <th className="text-left p-3">Role</th>
+              <th className="text-left p-3">Category</th>
+              <th className="text-left p-3">Competency</th>
+              <th className="text-left p-3">Description</th>
+              <th className="text-left p-3 w-32">Actions</th>
             </tr>
           </thead>
           <tbody>
             {items.map(it => (
               <tr key={it.id} className="border-t">
-                <td className="p-2">{it.role}</td>
-                <td className="p-2">
+                <td className="p-3">{it.role}</td>
+                <td className="p-3">
                   {editingId === it.id ? (
                     <select
                       className="border rounded-md p-1 bg-white text-black border-[#057e7f]"
@@ -2420,8 +2485,7 @@ function AdminRoles_Description() {
                     it.category
                   )}
                 </td>
-
-                <td className="p-2">
+                <td className="p-3">
                   {editingId === it.id ? (
                     <input
                       className="border rounded-md p-1 w-full bg-white text-black border-[#057e7f]"
@@ -2432,8 +2496,7 @@ function AdminRoles_Description() {
                     <span className="text-slate-800">{it.competency || ""}</span>
                   )}
                 </td>
-
-                <td className="p-2">
+                <td className="p-3">
                   {editingId === it.id ? (
                     <textarea
                       className="border rounded-md p-1 w-full bg-white text-black border-[#057e7f]"
@@ -2454,8 +2517,7 @@ function AdminRoles_Description() {
                     </div>
                   )}
                 </td>
-
-                <td className="p-2">
+                <td className="p-3">
                   {editingId === it.id ? (
                     <div className="flex gap-2">
                       <button
@@ -2500,7 +2562,9 @@ function AdminRoles_Description() {
               </tr>
             ))}
             {items.length === 0 && (
-              <tr><td className="p-2 text-slate-500" colSpan={5}>No data.</td></tr>
+              <tr>
+                <td className="p-3 text-slate-500" colSpan={5}>No data.</td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -2508,6 +2572,7 @@ function AdminRoles_Description() {
     </div>
   );
 }
+
 
 
 
@@ -2543,7 +2608,7 @@ function AdminRoles_Definition() {
   }
 
   async function save(id) {
-    const payload = { role: edit.role.trim(), definition: edit.definition || null };
+    const payload = { role: (edit.role || "").trim(), definition: edit.definition || null };
     if (!payload.role) return;
     const { error } = await supabase.from("roles_definitions").update(payload).eq("id", id);
     if (error) { alert(`Update failed: ${error.message}`); return; }
@@ -2560,22 +2625,22 @@ function AdminRoles_Definition() {
 
   return (
     <div className="grid gap-6">
-      {/* Formulaire responsive */}
-      <div className="bg-white p-4 rounded-xl shadow grid gap-3">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* Formulaire desktop */}
+      <div className="bg-white p-6 rounded-xl shadow grid gap-4 max-w-5xl">
+        <div className="grid grid-cols-3 gap-4">
           <label className="grid gap-1">
             <span className="text-sm text-slate-600">Role (name)</span>
             <input
-              className="border rounded-md p-2 bg-white text-black border-[#057e7f] w-full"
+              className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
               placeholder="e.g. Consultant"
               value={newRole}
               onChange={(e)=>setNewRole(e.target.value)}
             />
           </label>
-          <label className="grid gap-1 md:col-span-2">
+          <label className="grid gap-1 col-span-2">
             <span className="text-sm text-slate-600">Definition</span>
             <textarea
-              className="border rounded-md p-2 bg-white text-black border-[#057e7f] w-full"
+              className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
               rows={3}
               placeholder="Short definition of the role…"
               value={defn}
@@ -2583,31 +2648,33 @@ function AdminRoles_Definition() {
             />
           </label>
         </div>
-        <button
-          onClick={add}
-          className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 w-full sm:w-auto"
-        >
-          Add role
-        </button>
+        <div>
+          <button
+            onClick={add}
+            className="px-5 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90"
+          >
+            Add role
+          </button>
+        </div>
       </div>
 
-      {/* Liste */}
-      <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
-        <table className="min-w-[720px] w-full text-xs md:text-sm">
+      {/* Tableau desktop */}
+      <div className="overflow-auto max-h-[65vh] bg-white rounded-2xl shadow">
+        <table className="min-w-[900px] w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="text-left p-2">Role</th>
-              <th className="text-left p-2">Definition</th>
-              <th className="text-left p-2 w-32">Actions</th>
+              <th className="text-left p-3">Role</th>
+              <th className="text-left p-3">Definition</th>
+              <th className="text-left p-3 w-32">Actions</th>
             </tr>
           </thead>
           <tbody>
             {items.map(it => (
               <tr key={it.id} className="border-t">
-                <td className="p-2">
+                <td className="p-3">
                   {editingId === it.id ? (
                     <input
-                      className="border rounded-md p-1 w-full bg-white text-black border-[#057e7f]"
+                      className="border rounded-md p-2 w-full bg-white text-black border-[#057e7f]"
                       value={edit.role}
                       onChange={(e)=>setEdit(s=>({...s, role: e.target.value}))}
                     />
@@ -2615,10 +2682,10 @@ function AdminRoles_Definition() {
                     <span className="text-slate-800">{it.role}</span>
                   )}
                 </td>
-                <td className="p-2">
+                <td className="p-3">
                   {editingId === it.id ? (
                     <textarea
-                      className="border rounded-md p-1 w-full bg-white text-black border-[#057e7f]"
+                      className="border rounded-md p-2 w-full bg-white text-black border-[#057e7f]"
                       rows={3}
                       value={edit.definition || ""}
                       onChange={(e)=>setEdit(s=>({...s, definition: e.target.value}))}
@@ -2630,24 +2697,24 @@ function AdminRoles_Definition() {
                     >
                       {(() => {
                         const full = (it.definition || "").trim();
-                        const max = 60;
+                        const max = 80;
                         return full.length > max ? full.slice(0, max) + "…" : full;
                       })()}
                     </div>
                   )}
                 </td>
-                <td className="p-2">
+                <td className="p-3">
                   {editingId === it.id ? (
                     <div className="flex gap-2">
                       <button
                         onClick={() => save(it.id)}
-                        className="text-green-700 bg-white rounded-full px-2 hover:bg-slate-50"
+                        className="text-green-700 bg-white rounded-full px-3 py-1 hover:bg-slate-50"
                       >
                         Save
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="text-slate-600 bg-white rounded-full px-2 hover:bg-slate-50"
+                        className="text-slate-600 bg-white rounded-full px-3 py-1 hover:bg-slate-50"
                       >
                         Cancel
                       </button>
@@ -2656,14 +2723,14 @@ function AdminRoles_Definition() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => { setEditingId(it.id); setEdit({ role: it.role, definition: it.definition || "" }); }}
-                        className="text-blue-600 bg-white rounded-full px-2 hover:bg-slate-50"
+                        className="text-blue-600 bg-white rounded-full px-3 py-1 hover:bg-slate-50"
                         title="Edit"
                       >
                         ✎
                       </button>
                       <button
                         onClick={() => remove(it.id)}
-                        className="text-red-600 bg-white rounded-full px-2 hover:bg-slate-50"
+                        className="text-red-600 bg-white rounded-full px-3 py-1 hover:bg-slate-50"
                         title="Delete"
                       >
                         ✕
@@ -2674,7 +2741,7 @@ function AdminRoles_Definition() {
               </tr>
             ))}
             {items.length === 0 && (
-              <tr><td className="p-2 text-slate-500" colSpan={3}>No roles yet.</td></tr>
+              <tr><td className="p-3 text-slate-500" colSpan={3}>No roles yet.</td></tr>
             )}
           </tbody>
         </table>
@@ -2682,6 +2749,7 @@ function AdminRoles_Definition() {
     </div>
   );
 }
+
 
 
 
@@ -2692,73 +2760,97 @@ function AdminRoles_Definition() {
 function AdminRoles_Assign() {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]); // [{id, role}]
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { load(); }, []);
 
   async function load() {
-    const { data: u, error: eu } = await supabase
-      .from("profiles")
-      .select("id, email, job_role_id")
-      .order("email", { ascending: true });
-    if (eu) { alert(`Load users failed: ${eu.message}`); return; }
-    setUsers(u || []);
+    try {
+      setLoading(true);
+      const { data: u, error: eu } = await supabase
+        .from("profiles")
+        .select("id, email, job_role_id")
+        .order("email", { ascending: true });
+      if (eu) throw eu;
+      setUsers(u || []);
 
-    const { data: r, error: er } = await supabase
-      .from("roles_definitions")
-      .select("id, role")
-      .order("role", { ascending: true });
-    if (er) { alert(`Load roles failed: ${er.message}`); return; }
-    setRoles(r || []);
+      const { data: r, error: er } = await supabase
+        .from("roles_definitions")
+        .select("id, role")
+        .order("role", { ascending: true });
+      if (er) throw er;
+      setRoles(r || []);
+    } catch (e) {
+      console.error(e);
+      alert(`Load failed: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function updateRole(userId, newRoleId) {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ job_role_id: newRoleId || null })
-      .eq("id", userId);
-    if (error) { alert(`Update failed: ${error.message}`); return; }
-    setUsers(list => list.map(u => u.id === userId ? { ...u, job_role_id: newRoleId || null } : u));
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ job_role_id: newRoleId || null })
+        .eq("id", userId);
+      if (error) throw error;
+      setUsers(list =>
+        list.map(u => (u.id === userId ? { ...u, job_role_id: newRoleId || null } : u))
+      );
+    } catch (e) {
+      alert(`Update failed: ${e.message}`);
+    }
   }
 
   const noRoles = roles.length === 0;
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-6">
+      {/* Infos */}
       {noRoles && (
-        <div className="text-xs text-amber-700 bg-amber-100 rounded px-2 py-1 w-fit">
+        <div className="px-4 py-3 rounded-lg bg-amber-50 text-amber-800 w-fit">
           Define roles first in “Definition of roles”.
         </div>
       )}
-<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-xl shadow">
-  <table className="min-w-[560px] w-full text-xs md:text-sm">
 
+      {/* Tableau desktop */}
+      <div className="overflow-auto max-h-[65vh] bg-white rounded-2xl shadow">
+        <table className="min-w-[720px] w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="text-left p-2">Email</th>
-              <th className="text-left p-2">Role</th>
+              <th className="text-left p-3 w-[50%]">Email</th>
+              <th className="text-left p-3">Role</th>
             </tr>
           </thead>
           <tbody>
-            {users.map(u => (
-              <tr key={u.id} className="border-t">
-                <td className="p-2">{u.email}</td>
-                <td className="p-2">
-                  <select
-                    className="border rounded-md p-2 bg-white text-black border-[#057e7f]"
-                    value={u.job_role_id || ""}
-                    onChange={(e) => updateRole(u.id, e.target.value || null)}
-                    disabled={noRoles}
-                  >
-                    <option value="">—</option>
-                    {roles.map(r => (
-                      <option key={r.id} value={r.id}>{r.role}</option>
-                    ))}
-                  </select>
-                </td>
+            {loading ? (
+              <tr>
+                <td className="p-3 text-slate-500" colSpan={2}>Loading…</td>
               </tr>
-            ))}
-            {users.length === 0 && (
-              <tr><td className="p-2 text-slate-500" colSpan={2}>No users.</td></tr>
+            ) : users.length === 0 ? (
+              <tr>
+                <td className="p-3 text-slate-500" colSpan={2}>No users.</td>
+              </tr>
+            ) : (
+              users.map((u) => (
+                <tr key={u.id} className="border-t">
+                  <td className="p-3">{u.email}</td>
+                  <td className="p-3">
+                    <select
+                      className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
+                      value={u.job_role_id || ""}
+                      onChange={(e) => updateRole(u.id, e.target.value || null)}
+                      disabled={noRoles}
+                    >
+                      <option value="">—</option>
+                      {roles.map(r => (
+                        <option key={r.id} value={r.id}>{r.role}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -2769,13 +2861,16 @@ function AdminRoles_Assign() {
 
 
 
+
 function AdminEmployees() {
   const [users, setUsers] = useState([]);
   const { setToast } = useToast();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
+        setLoading(true);
         const { data, error } = await supabase
           .from("profiles")
           .select("id, email, join_date")
@@ -2785,6 +2880,8 @@ function AdminEmployees() {
       } catch (e) {
         console.error(e);
         alert(`Load employees failed: ${e.message}`);
+      } finally {
+        setLoading(false);
       }
     })();
   }, []);
@@ -2796,52 +2893,58 @@ function AdminEmployees() {
       if (error) throw error;
       setUsers((list) => list.map(u => u.id === userId ? { ...u, join_date: val || null } : u));
       setToast("Saved");
-      setTimeout(() => setToast(""), 1500);
+      setTimeout(() => setToast(""), 1600);
     } catch (e) {
       alert(`Update failed: ${e.message}`);
     }
   }
 
   return (
-    <section className="grid gap-4">
-<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-xl shadow">
-  <table className="min-w-[560px] w-full text-xs md:text-sm">
-
+    <section className="grid gap-6">
+      {/* Tableau desktop */}
+      <div className="overflow-auto max-h-[65vh] bg-white rounded-2xl shadow">
+        <table className="min-w-[720px] w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="text-left p-2">Email</th>
-              <th className="text-left p-2">Anniversary (date of joining)</th>
+              <th className="text-left p-3 w-[55%]">Email</th>
+              <th className="text-left p-3">Anniversary (date of joining)</th>
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
-              <tr key={u.id} className="border-t">
-                <td className="p-2">{u.email}</td>
-                <td className="p-2">
-                  <input
-                    type="date"
-                    className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
-                    value={u.join_date ? String(u.join_date).slice(0, 10) : ""}
-                    onChange={(e) => updateJoinDate(u.id, e.target.value)}
-                  />
-                </td>
-              </tr>
-            ))}
-            {users.length === 0 && (
+            {loading ? (
               <tr>
-                <td className="p-2 text-slate-500" colSpan={2}>No employees.</td>
+                <td className="p-3 text-slate-500" colSpan={2}>Loading…</td>
               </tr>
+            ) : users.length === 0 ? (
+              <tr>
+                <td className="p-3 text-slate-500" colSpan={2}>No employees.</td>
+              </tr>
+            ) : (
+              users.map((u) => (
+                <tr key={u.id} className="border-t">
+                  <td className="p-3">{u.email}</td>
+                  <td className="p-3">
+                    <input
+                      type="date"
+                      className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
+                      value={u.join_date ? String(u.join_date).slice(0, 10) : ""}
+                      onChange={(e) => updateJoinDate(u.id, e.target.value)}
+                    />
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
 
       <div className="text-xs text-slate-500">
-        Tip: set each employee’s <em>date of joining</em> to use for anniversary-related features later.
+        Tip: set each employee’s <em>date of joining</em> to enable anniversary-related features later.
       </div>
     </section>
   );
 }
+
 
 
 
