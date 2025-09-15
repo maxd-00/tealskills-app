@@ -1119,7 +1119,7 @@ function Admin() {
   const [tab, setTab] = useState("okr"); // okr | global | roles | employee
 
   return (
-    <section className="h-[calc(100dvh-64px)] flex flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+8px)] overflow-hidden">
+<section className="h-[calc(100dvh-64px)] flex flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+8px)] overflow-hidden overflow-x-hidden">
       <header className="pb-2">
         <h1 className="text-xl md:text-2xl font-bold text-[#057e7f] mb-2">Admin</h1>
         {/* ✅ onglets qui wrap sur mobile */}
@@ -1278,12 +1278,12 @@ function AdminOKR_Versions() {
 
   return (
     <div className="grid gap-4">
-      {/* Sélecteur de consultant */}
+      {/* Employee (responsive) */}
       <div className="bg-white p-4 rounded-xl shadow grid gap-2">
-        <label className="grid gap-1 max-w-sm">
+        <label className="grid gap-1 w-full">
           <span className="text-sm text-slate-600">Employee</span>
           <select
-            className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
+            className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f] w-full max-w-full"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
           >
@@ -1292,12 +1292,13 @@ function AdminOKR_Versions() {
         </label>
       </div>
 
-      {/* Création de version */}
-      <div className="bg-white p-4 rounded-xl shadow grid gap-2">
+      {/* Create a version (responsive) */}
+      <div className="bg-white p-4 rounded-xl shadow grid gap-3">
         <div className="font-medium">Create a version for this employee</div>
-        <div className="flex gap-2 flex-wrap items-center">
+
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-stretch">
           <input
-            className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
+            className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f] w-full min-w-0"
             placeholder="e.g., Q4 2025"
             value={newVersion}
             onChange={(e) => setNewVersion(e.target.value)}
@@ -1305,7 +1306,7 @@ function AdminOKR_Versions() {
           <button
             onClick={addVersion}
             disabled={!userId}
-            className={`px-4 py-2 rounded-full ${userId ? "bg-[#057e7f] text-white" : "bg-slate-200 text-slate-500 cursor-not-allowed"}`}
+            className={`px-4 py-3 rounded-full ${userId ? "bg-[#057e7f] text-white" : "bg-slate-200 text-slate-500 cursor-not-allowed"} w-full sm:w-auto`}
           >
             Add Version
           </button>
@@ -1313,10 +1314,9 @@ function AdminOKR_Versions() {
       </div>
 
       {/* Liste des versions */}
-<div className="bg-white p-3 md:p-4 rounded-xl shadow">
-  <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh]">
-    <table className="min-w-[640px] w-full text-xs md:text-sm">
-
+      <div className="bg-white p-3 md:p-4 rounded-xl shadow">
+        <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh]">
+          <table className="min-w-[640px] w-full text-xs md:text-sm">
             <thead className="bg-slate-50">
               <tr>
                 <th className="text-left p-2">Label</th>
@@ -1369,6 +1369,7 @@ function AdminOKR_Versions() {
     </div>
   );
 }
+
 
 function AdminOKR_Employee() {
   const [employees, setEmployees] = useState([]);
@@ -1475,12 +1476,12 @@ function AdminOKR_Employee() {
 
   return (
     <div className="grid gap-4">
-      {/* Filtres */}
-      <div className="grid md:grid-cols-3 gap-2 items-end">
+      {/* Filtres responsive */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Employee</span>
           <select
-            className="border rounded-md p-2 bg-white text-black"
+            className="border rounded-md p-2 bg-white text-black w-full"
             value={employeeId}
             onChange={(e) => setEmployeeId(e.target.value)}
           >
@@ -1492,10 +1493,10 @@ function AdminOKR_Employee() {
           </select>
         </label>
 
-        <label className="grid gap-1">
+        <label className="grid gap-1 md:col-span-2">
           <span className="text-sm text-slate-600">Version</span>
           <select
-            className="border rounded-md p-2 bg-white text-black"
+            className="border rounded-md p-2 bg-white text-black w-full"
             value={versionId}
             onChange={(e) => setVersionId(e.target.value)}
           >
@@ -1509,10 +1510,8 @@ function AdminOKR_Employee() {
       </div>
 
       {/* Visualisation */}
-<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
-  <table className="min-w-[560px] w-full text-xs md:text-sm">
-
-
+      <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
+        <table className="min-w-[560px] w-full text-xs md:text-sm">
           <thead className="bg-slate-50">
             <tr>
               <th className="text-left p-2 w-44">Category</th>
@@ -1558,6 +1557,7 @@ function AdminOKR_Employee() {
     </div>
   );
 }
+
 
 function AdminOKR_Visualization() {
   const [users, setUsers] = useState([]);
@@ -1783,44 +1783,46 @@ function AdminGlobal_New() {
 
   return (
     <div className="grid gap-4">
-      <div className="bg-white p-4 rounded-xl shadow grid md:grid-cols-4 gap-2">
-        <input
-          className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
-          placeholder="Year (e.g. 2025)"
-          value={newYear.year}
-          onChange={(e) => setNewYear((s) => ({ ...s, year: e.target.value }))}
-        />
-        <input
-          className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
-          placeholder="Target"
-          value={newYear.target}
-          onChange={(e) => setNewYear((s) => ({ ...s, target: e.target.value }))}
-        />
-        <input
-          className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
-          placeholder="Last Year"
-          value={newYear.last_year}
-          onChange={(e) =>
-            setNewYear((s) => ({ ...s, last_year: e.target.value }))
-          }
-        />
-        <button
-          onClick={addYear}
-          className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90"
-        >
-          Add Year
-        </button>
+      {/* Ligne d’ajout responsive */}
+      <div className="bg-white p-4 rounded-xl shadow grid gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          <input
+            className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
+            placeholder="Year (e.g. 2025)"
+            value={newYear.year}
+            onChange={(e) => setNewYear((s) => ({ ...s, year: e.target.value }))}
+          />
+          <input
+            className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
+            placeholder="Target"
+            value={newYear.target}
+            onChange={(e) => setNewYear((s) => ({ ...s, target: e.target.value }))}
+          />
+          <input
+            className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f] focus:border-[#057e7f]"
+            placeholder="Last Year"
+            value={newYear.last_year}
+            onChange={(e) =>
+              setNewYear((s) => ({ ...s, last_year: e.target.value }))
+            }
+          />
+          <button
+            onClick={addYear}
+            className="px-4 py-3 rounded-full bg-[#057e7f] text-white hover:opacity-90 w-full"
+          >
+            Add Year
+          </button>
+        </div>
       </div>
 
-      {/* Existing years with target/last_year */}
+      {/* Existing years */}
       <div className="bg-white p-4 rounded-xl shadow">
         <div className="text-sm text-slate-600 mb-2">Existing years</div>
         {years.length === 0 ? (
           <div className="text-slate-500">No years yet.</div>
         ) : (
-<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh]">
-  <table className="min-w-[680px] w-full text-xs md:text-sm">
-
+          <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh]">
+            <table className="min-w-[680px] w-full text-xs md:text-sm">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="text-left p-2">Year</th>
@@ -1877,6 +1879,7 @@ function AdminGlobal_New() {
     </div>
   );
 }
+
 
 function AdminGlobal_Data() {
   const [years, setYears] = useState([]);
@@ -2318,13 +2321,13 @@ function AdminRoles_Description() {
 
   return (
     <div className="grid gap-6">
-      {/* Formulaire */}
+      {/* Formulaire responsive */}
       <div className="bg-white p-4 rounded-2xl shadow grid gap-3">
-        <div className="grid md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <label className="grid gap-1">
             <span className="text-sm text-slate-600">Role</span>
             <select
-              className="border rounded-md p-2 bg-white text-black border-[#057e7f]"
+              className="border rounded-md p-2 bg-white text-black border-[#057e7f] w-full"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               disabled={availableRoles.length === 0}
@@ -2340,7 +2343,7 @@ function AdminRoles_Description() {
           <label className="grid gap-1">
             <span className="text-sm text-slate-600">Category</span>
             <select
-              className="border rounded-md p-2 bg-white text-black border-[#057e7f]"
+              className="border rounded-md p-2 bg-white text-black border-[#057e7f] w-full"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
@@ -2351,7 +2354,7 @@ function AdminRoles_Description() {
           <label className="grid gap-1 md:col-span-2">
             <span className="text-sm text-slate-600">Competency (short)</span>
             <input
-              className="border rounded-md p-2 bg-white text-black border-[#057e7f]"
+              className="border rounded-md p-2 bg-white text-black border-[#057e7f] w-full min-w-0"
               placeholder="e.g. Stakeholder management"
               value={competency}
               onChange={(e) => setCompetency(e.target.value)}
@@ -2363,7 +2366,7 @@ function AdminRoles_Description() {
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Description</span>
           <textarea
-            className="border rounded-md p-2 bg-white text-black border-[#057e7f]"
+            className="border rounded-md p-2 bg-white text-black border-[#057e7f] w-full"
             rows={3}
             placeholder="Longer description…"
             value={description}
@@ -2372,26 +2375,20 @@ function AdminRoles_Description() {
           />
         </label>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={addItem}
-            disabled={!role}
-            className={`px-4 py-2 rounded-full ${role ? "bg-[#057e7f] text-white hover:opacity-90" : "bg-slate-200 text-slate-500 cursor-not-allowed"}`}
-          >
-            Add competency
-          </button>
-          {availableRoles.length === 0 && (
-            <span className="text-xs text-amber-700 bg-amber-100 rounded px-2 py-1">
-              Create roles in “Definition of roles” first.
-            </span>
-          )}
-        </div>
+        <button
+          onClick={addItem}
+          disabled={!role}
+          className={`px-4 py-2 rounded-full ${
+            role ? "bg-[#057e7f] text-white hover:opacity-90" : "bg-slate-200 text-slate-500 cursor-not-allowed"
+          } w-full sm:w-auto`}
+        >
+          Add competency
+        </button>
       </div>
 
       {/* Liste */}
-<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
-  <table className="min-w-[840px] w-full text-xs md:text-sm">
-
+      <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
+        <table className="min-w-[840px] w-full text-xs md:text-sm">
           <thead className="bg-slate-50">
             <tr>
               <th className="text-left p-2">Role</th>
@@ -2513,6 +2510,7 @@ function AdminRoles_Description() {
 }
 
 
+
 /* =============================
  * Roles — Definition of roles (CRUD)
  * ============================= */
@@ -2562,12 +2560,13 @@ function AdminRoles_Definition() {
 
   return (
     <div className="grid gap-6">
+      {/* Formulaire responsive */}
       <div className="bg-white p-4 rounded-xl shadow grid gap-3">
-        <div className="grid md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <label className="grid gap-1">
             <span className="text-sm text-slate-600">Role (name)</span>
             <input
-              className="border rounded-md p-2 bg-white text-black border-[#057e7f]"
+              className="border rounded-md p-2 bg-white text-black border-[#057e7f] w-full"
               placeholder="e.g. Consultant"
               value={newRole}
               onChange={(e)=>setNewRole(e.target.value)}
@@ -2576,7 +2575,7 @@ function AdminRoles_Definition() {
           <label className="grid gap-1 md:col-span-2">
             <span className="text-sm text-slate-600">Definition</span>
             <textarea
-              className="border rounded-md p-2 bg-white text-black border-[#057e7f]"
+              className="border rounded-md p-2 bg-white text-black border-[#057e7f] w-full"
               rows={3}
               placeholder="Short definition of the role…"
               value={defn}
@@ -2584,19 +2583,17 @@ function AdminRoles_Definition() {
             />
           </label>
         </div>
-        <div>
-          <button
-            onClick={add}
-            className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90"
-          >
-            Add role
-          </button>
-        </div>
+        <button
+          onClick={add}
+          className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 w-full sm:w-auto"
+        >
+          Add role
+        </button>
       </div>
 
-<div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
-  <table className="min-w-[720px] w-full text-xs md:text-sm">
-
+      {/* Liste */}
+      <div className="overflow-auto overflow-x-auto max-h-[56vh] md:max-h-[60vh] bg-white rounded-2xl shadow">
+        <table className="min-w-[720px] w-full text-xs md:text-sm">
           <thead className="bg-slate-50">
             <tr>
               <th className="text-left p-2">Role</th>
@@ -2685,6 +2682,7 @@ function AdminRoles_Definition() {
     </div>
   );
 }
+
 
 
 
