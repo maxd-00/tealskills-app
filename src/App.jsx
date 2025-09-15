@@ -1786,14 +1786,33 @@ function AdminGlobal_New() {
     }
   }
 
+  // Utilitaires: nettoyage et conversion "sûre"
+  const toInt = (v) => {
+    if (v === "" || v === null || v === undefined) return null;
+    // retire tout sauf chiffres et signe négatif (gère espaces fines, NBSP, virgules…)
+    const cleaned = String(v).replace(/[^\d-]/g, "");
+    if (!cleaned || cleaned === "-") return null;
+    const n = parseInt(cleaned, 10);
+    return Number.isFinite(n) ? n : null;
+  };
+
   async function addYear() {
-    if (!newYear.year) return;
+    // year obligatoire et entier valide
+    const yearVal = toInt(newYear.year);
+    if (yearVal === null) {
+      alert("Please enter a valid year (e.g. 2025).");
+      return;
+    }
+
+    // target / last_year optionnels → défaut 0 si vide/NaN
+    const targetVal = toInt(newYear.target);
+    const lastYearVal = toInt(newYear.last_year);
 
     const isFirst = (years?.length || 0) === 0;
     const payload = {
-      year: Number(newYear.year),
-      target: Number(newYear.target || 0),
-      last_year: Number(newYear.last_year || 0),
+      year: yearVal,
+      target: targetVal ?? 0,
+      last_year: lastYearVal ?? 0,
       is_active: isFirst,
     };
 
@@ -1805,14 +1824,17 @@ function AdminGlobal_New() {
         .single();
       if (error) throw error;
 
+      // Pré-crée les 12 mois à 0
       const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-      await supabase
+      const { error: em } = await supabase
         .from("global_months")
         .insert(MONTHS.map((m) => ({ year_id: data.id, month: m, value: 0 })));
+      if (em) throw em;
 
       setNewYear({ year: "", target: "", last_year: "" });
       loadYears();
     } catch (e) {
+      console.error(e);
       alert(`Add year failed: ${e.message}`);
     }
   }
@@ -1840,21 +1862,27 @@ function AdminGlobal_New() {
 
   return (
     <div className="grid gap-6">
-      {/* Formulaire ajout année (desktop large) */}
+      {/* Formulaire desktop */}
       <div className="bg-white p-6 rounded-xl shadow grid grid-cols-4 gap-4 max-w-5xl">
         <input
+          type="number"
+          inputMode="numeric"
           className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
           placeholder="Year (e.g. 2025)"
           value={newYear.year}
           onChange={(e) => setNewYear((s) => ({ ...s, year: e.target.value }))}
         />
         <input
+          type="number"
+          inputMode="numeric"
           className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
           placeholder="Target"
           value={newYear.target}
           onChange={(e) => setNewYear((s) => ({ ...s, target: e.target.value }))}
         />
         <input
+          type="number"
+          inputMode="numeric"
           className="border rounded-md p-3 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
           placeholder="Last Year"
           value={newYear.last_year}
@@ -1934,6 +1962,7 @@ function AdminGlobal_New() {
     </div>
   );
 }
+
 
 
 
@@ -2598,7 +2627,7 @@ function AdminRoles_Definition() {
   }
 
   async function add() {
-    const name = newRole.trim();
+    const name = (newRole || "").trim();
     if (!name) return;
     const payload = { role: name, definition: defn || null };
     const { error } = await supabase.from("roles_definitions").insert(payload);
@@ -2616,11 +2645,105 @@ function AdminRoles_Definition() {
     load();
   }
 
+  /**
+   * Suppression robuste d'un rôle :
+   * - Vérifie s'il existe des competencies liées (roles_competencies.role == roleName)
+   * - Vérifie s'il est attribué à des employés (profiles.job_role_id == roleId)
+   * - Demande confirmation pour cascade (delete competencies) et désattribution (set job_role_id = NULL)
+   * - Exécute : delete competencies -> unassign employees -> delete role
+   */
   async function remove(id) {
-    if (!confirm("Delete this role definition?")) return;
-    const { error } = await supabase.from("roles_definitions").delete().eq("id", id);
-    if (error) { alert(`Delete failed: ${error.message}`); return; }
-    load();
+    try {
+      const roleRow = items.find(r => r.id === id);
+      if (!roleRow) return;
+
+      // 1) Vérifier dépendances dans roles_competencies
+      const { data: comps, error: ec } = await supabase
+        .from("roles_competencies")
+        .select("id", { count: "exact", head: true })
+        .eq("role", roleRow.role);
+      if (ec) throw ec;
+      const compCount = (comps && comps.length !== undefined) ? comps.length : (comps === null ? 0 : 0); // head:true => data=null, mais count exploitable via ec?exact; fallback
+      // workaround: refaire une vraie count si nécessaire
+      let competenciesCount = 0;
+      if (ec === null) {
+        // Si head:true ne renvoie pas count dans ce client, refaire sans head :
+        const { data: comps2, error: ec2 } = await supabase
+          .from("roles_competencies")
+          .select("id")
+          .eq("role", roleRow.role);
+        if (ec2) throw ec2;
+        competenciesCount = (comps2 || []).length;
+      }
+
+      // 2) Vérifier dépendances dans profiles (assignations)
+      const { data: profs2, error: ep2 } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("job_role_id", id);
+      if (ep2) throw ep2;
+      const assignedCount = (profs2 || []).length;
+
+      // 3) Demander confirmations selon dépendances
+      let proceed = confirm(`Delete role “${roleRow.role}” ?`);
+      if (!proceed) return;
+
+      let alsoDeleteCompetencies = false;
+      let alsoUnassignEmployees = false;
+
+      if (competenciesCount > 0) {
+        alsoDeleteCompetencies = confirm(
+          `This role has ${competenciesCount} linked competencies.\n` +
+          `Do you also want to DELETE these competencies?`
+        );
+        if (!alsoDeleteCompetencies) {
+          alert("Deletion cancelled because the role is still referenced by competencies.");
+          return;
+        }
+      }
+
+      if (assignedCount > 0) {
+        alsoUnassignEmployees = confirm(
+          `This role is assigned to ${assignedCount} employee(s).\n` +
+          `Do you want to UNASSIGN this role from those employees (set to none)?`
+        );
+        if (!alsoUnassignEmployees) {
+          alert("Deletion cancelled because the role is still assigned to employees.");
+          return;
+        }
+      }
+
+      // 4) Exécuter dans le bon ordre
+      // 4.a) Supprimer les competencies liées (si demandé/nécessaire)
+      if (alsoDeleteCompetencies) {
+        const { error: edc } = await supabase
+          .from("roles_competencies")
+          .delete()
+          .eq("role", roleRow.role);
+        if (edc) throw edc;
+      }
+
+      // 4.b) Désassigner des employés (si demandé)
+      if (alsoUnassignEmployees) {
+        const { error: eua } = await supabase
+          .from("profiles")
+          .update({ job_role_id: null })
+          .eq("job_role_id", id);
+        if (eua) throw eua;
+      }
+
+      // 4.c) Supprimer le rôle
+      const { error: erem } = await supabase
+        .from("roles_definitions")
+        .delete()
+        .eq("id", id);
+      if (erem) throw erem;
+
+      load();
+    } catch (e) {
+      console.error(e);
+      alert(`Delete failed: ${e.message}`);
+    }
   }
 
   return (
@@ -2749,6 +2872,7 @@ function AdminRoles_Definition() {
     </div>
   );
 }
+
 
 
 
