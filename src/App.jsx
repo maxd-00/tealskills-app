@@ -2885,6 +2885,7 @@ function AdminRoles_Assign() {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]); // [{id, role}]
   const [loading, setLoading] = useState(true);
+  const { setToast } = useToast?.() || { setToast: () => {} };
 
   useEffect(() => { load(); }, []);
 
@@ -2912,16 +2913,24 @@ function AdminRoles_Assign() {
     }
   }
 
-  async function updateRole(userId, newRoleId) {
+  // ⚠️ Si vos IDs de rôles sont des UUIDs, remplacez Number(val) par val (direct).
+  async function updateRole(userId, val) {
     try {
+      const newId = val ? Number(val) : null; // <-- mettez 'val' si UUID
       const { error } = await supabase
         .from("profiles")
-        .update({ job_role_id: newRoleId || null })
+        .update({ job_role_id: newId })
         .eq("id", userId);
       if (error) throw error;
+
       setUsers(list =>
-        list.map(u => (u.id === userId ? { ...u, job_role_id: newRoleId || null } : u))
+        list.map(u => (u.id === userId ? { ...u, job_role_id: newId } : u))
       );
+
+      if (setToast) {
+        setToast("Role updated");
+        setTimeout(() => setToast(""), 1200);
+      }
     } catch (e) {
       alert(`Update failed: ${e.message}`);
     }
@@ -2931,14 +2940,12 @@ function AdminRoles_Assign() {
 
   return (
     <div className="grid gap-6">
-      {/* Infos */}
       {noRoles && (
         <div className="px-4 py-3 rounded-lg bg-amber-50 text-amber-800 w-fit">
           Define roles first in “Definition of roles”.
         </div>
       )}
 
-      {/* Tableau desktop */}
       <div className="overflow-auto max-h-[65vh] bg-white rounded-2xl shadow">
         <table className="min-w-[720px] w-full text-sm">
           <thead className="bg-slate-50">
@@ -2963,13 +2970,15 @@ function AdminRoles_Assign() {
                   <td className="p-3">
                     <select
                       className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
-                      value={u.job_role_id || ""}
-                      onChange={(e) => updateRole(u.id, e.target.value || null)}
+                      value={String(u.job_role_id ?? "")}
+                      onChange={(e) => updateRole(u.id, e.target.value || "")}
                       disabled={noRoles}
                     >
                       <option value="">—</option>
                       {roles.map(r => (
-                        <option key={r.id} value={r.id}>{r.role}</option>
+                        <option key={String(r.id)} value={String(r.id)}>
+                          {r.role}
+                        </option>
                       ))}
                     </select>
                   </td>
@@ -2982,6 +2991,7 @@ function AdminRoles_Assign() {
     </div>
   );
 }
+
 
 
 
