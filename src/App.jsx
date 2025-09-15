@@ -2885,21 +2885,26 @@ function AdminRoles_Assign() {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]); // [{id, role}]
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Brouillon local : userId -> selectedRoleId (string ou null)
+  // Brouillon local : userId -> selectedRoleId (string UUID ou "")
   const [draft, setDraft] = useState({}); // ex: { "user-uuid": "role-uuid" }
+
+  const { setToast } = useToast?.() || { setToast: () => {} };
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     try {
       setLoading(true);
+      // Utilisateurs avec rôle courant
       const { data: u, error: eu } = await supabase
         .from("profiles")
         .select("id, email, job_role_id")
         .order("email", { ascending: true });
       if (eu) throw eu;
 
+      // Rôles dispo
       const { data: r, error: er } = await supabase
         .from("roles_definitions")
         .select("id, role")
@@ -2909,7 +2914,7 @@ function AdminRoles_Assign() {
       setUsers(u || []);
       setRoles(r || []);
 
-      // initialise le brouillon avec la valeur actuelle
+      // (Ré)initialise le brouillon depuis la DB (source de vérité)
       const init = {};
       (u || []).forEach(user => {
         init[user.id] = user.job_role_id ? String(user.job_role_id) : "";
@@ -2924,44 +2929,75 @@ function AdminRoles_Assign() {
   }
 
   function onSelectChange(userId, val) {
-    setDraft(prev => ({ ...prev, [userId]: val })); // val = "" ou roleId (string)
+    setDraft(prev => ({ ...prev, [userId]: val })); // val = "" ou roleId (UUID string)
   }
 
   function isDirty(user) {
-    // différent de la valeur persistée ?
     const current = user.job_role_id ? String(user.job_role_id) : "";
     const staged  = draft[user.id] ?? "";
     return current !== staged;
   }
 
   async function saveOne(user) {
+    const staged = draft[user.id] ?? "";
+    const newId = staged || null; // UUID direct, null si vide
+
     try {
-      const staged = draft[user.id] ?? "";
-      // ⚠️ Si IDs numériques: const newId = staged ? Number(staged) : null;
-      const newId = staged || null; // UUID-safe
+      setSaving(true);
       const { error } = await supabase
         .from("profiles")
         .update({ job_role_id: newId })
         .eq("id", user.id);
       if (error) throw error;
 
-      // maj locale de la ligne + synchronise le brouillon
+      // 1) Synchronise localement (optimiste)
       setUsers(list =>
         list.map(u => (u.id === user.id ? { ...u, job_role_id: newId } : u))
       );
+
+      // 2) Recharge depuis la DB pour refléter l’état réel (anti-surprise)
+      await load();
+
+      setToast("Role updated");
+      setTimeout(() => setToast(""), 1100);
     } catch (e) {
+      console.error(e);
       alert(`Update failed: ${e.message}`);
+    } finally {
+      setSaving(false);
     }
   }
 
   async function saveAll() {
-    const dirtyUsers = users.filter(isDirty);
-    for (const u of dirtyUsers) {
-      await saveOne(u);
+    try {
+      setSaving(true);
+      const dirtyUsers = users.filter(isDirty);
+      for (const u of dirtyUsers) {
+        const staged = draft[u.id] ?? "";
+        const newId = staged || null; // UUID direct
+
+        const { error } = await supabase
+          .from("profiles")
+          .update({ job_role_id: newId })
+          .eq("id", u.id);
+        if (error) throw error;
+      }
+
+      // Recharge depuis la DB après toutes les écritures
+      await load();
+
+      setToast("All changes saved");
+      setTimeout(() => setToast(""), 1200);
+    } catch (e) {
+      console.error(e);
+      alert(`Bulk save failed: ${e.message}`);
+    } finally {
+      setSaving(false);
     }
   }
 
   const noRoles = roles.length === 0;
+  const anyDirty = users.some(isDirty);
 
   return (
     <div className="grid gap-6">
@@ -2970,10 +3006,10 @@ function AdminRoles_Assign() {
         <button
           onClick={saveAll}
           className="px-5 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={loading || users.every(u => !isDirty(u))}
+          disabled={loading || saving || !anyDirty}
           title="Save all changes"
         >
-          Save all changes
+          {saving ? "Saving…" : "Save all changes"}
         </button>
         {noRoles && (
           <div className="px-4 py-2 rounded-lg bg-amber-50 text-amber-800">
@@ -3004,6 +3040,7 @@ function AdminRoles_Assign() {
             ) : (
               users.map((u) => {
                 const staged = draft[u.id] ?? "";
+                const dirty = isDirty(u);
                 return (
                   <tr key={u.id} className="border-t">
                     <td className="p-3">{u.email}</td>
@@ -3012,7 +3049,7 @@ function AdminRoles_Assign() {
                         className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
                         value={staged}
                         onChange={(e) => onSelectChange(u.id, e.target.value)}
-                        disabled={noRoles}
+                        disabled={noRoles || saving}
                       >
                         <option value="">—</option>
                         {roles.map(r => (
@@ -3026,9 +3063,9 @@ function AdminRoles_Assign() {
                       <button
                         onClick={() => saveOne(u)}
                         className="px-4 py-1.5 rounded-full text-sm bg-[#057e7f] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!isDirty(u)}
+                        disabled={!dirty || saving}
                       >
-                        Save
+                        {saving && dirty ? "Saving…" : "Save"}
                       </button>
                     </td>
                   </tr>
@@ -3041,6 +3078,7 @@ function AdminRoles_Assign() {
     </div>
   );
 }
+
 
 
 
