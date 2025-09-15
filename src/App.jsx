@@ -2885,7 +2885,9 @@ function AdminRoles_Assign() {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]); // [{id, role}]
   const [loading, setLoading] = useState(true);
-  const { setToast } = useToast?.() || { setToast: () => {} };
+
+  // Brouillon local : userId -> selectedRoleId (string ou null)
+  const [draft, setDraft] = useState({}); // ex: { "user-uuid": "role-uuid" }
 
   useEffect(() => { load(); }, []);
 
@@ -2897,14 +2899,22 @@ function AdminRoles_Assign() {
         .select("id, email, job_role_id")
         .order("email", { ascending: true });
       if (eu) throw eu;
-      setUsers(u || []);
 
       const { data: r, error: er } = await supabase
         .from("roles_definitions")
         .select("id, role")
         .order("role", { ascending: true });
       if (er) throw er;
+
+      setUsers(u || []);
       setRoles(r || []);
+
+      // initialise le brouillon avec la valeur actuelle
+      const init = {};
+      (u || []).forEach(user => {
+        init[user.id] = user.job_role_id ? String(user.job_role_id) : "";
+      });
+      setDraft(init);
     } catch (e) {
       console.error(e);
       alert(`Load failed: ${e.message}`);
@@ -2913,26 +2923,41 @@ function AdminRoles_Assign() {
     }
   }
 
-  // ⚠️ Si vos IDs de rôles sont des UUIDs, remplacez Number(val) par val (direct).
-  async function updateRole(userId, val) {
+  function onSelectChange(userId, val) {
+    setDraft(prev => ({ ...prev, [userId]: val })); // val = "" ou roleId (string)
+  }
+
+  function isDirty(user) {
+    // différent de la valeur persistée ?
+    const current = user.job_role_id ? String(user.job_role_id) : "";
+    const staged  = draft[user.id] ?? "";
+    return current !== staged;
+  }
+
+  async function saveOne(user) {
     try {
-      const newId = val ? Number(val) : null; // <-- mettez 'val' si UUID
+      const staged = draft[user.id] ?? "";
+      // ⚠️ Si IDs numériques: const newId = staged ? Number(staged) : null;
+      const newId = staged || null; // UUID-safe
       const { error } = await supabase
         .from("profiles")
         .update({ job_role_id: newId })
-        .eq("id", userId);
+        .eq("id", user.id);
       if (error) throw error;
 
+      // maj locale de la ligne + synchronise le brouillon
       setUsers(list =>
-        list.map(u => (u.id === userId ? { ...u, job_role_id: newId } : u))
+        list.map(u => (u.id === user.id ? { ...u, job_role_id: newId } : u))
       );
-
-      if (setToast) {
-        setToast("Role updated");
-        setTimeout(() => setToast(""), 1200);
-      }
     } catch (e) {
       alert(`Update failed: ${e.message}`);
+    }
+  }
+
+  async function saveAll() {
+    const dirtyUsers = users.filter(isDirty);
+    for (const u of dirtyUsers) {
+      await saveOne(u);
     }
   }
 
@@ -2940,50 +2965,75 @@ function AdminRoles_Assign() {
 
   return (
     <div className="grid gap-6">
-      {noRoles && (
-        <div className="px-4 py-3 rounded-lg bg-amber-50 text-amber-800 w-fit">
-          Define roles first in “Definition of roles”.
-        </div>
-      )}
+      {/* Actions globales */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={saveAll}
+          className="px-5 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading || users.every(u => !isDirty(u))}
+          title="Save all changes"
+        >
+          Save all changes
+        </button>
+        {noRoles && (
+          <div className="px-4 py-2 rounded-lg bg-amber-50 text-amber-800">
+            Define roles first in “Definition of roles”.
+          </div>
+        )}
+      </div>
 
+      {/* Tableau desktop */}
       <div className="overflow-auto max-h-[65vh] bg-white rounded-2xl shadow">
-        <table className="min-w-[720px] w-full text-sm">
+        <table className="min-w-[820px] w-full text-sm">
           <thead className="bg-slate-50">
             <tr>
               <th className="text-left p-3 w-[50%]">Email</th>
               <th className="text-left p-3">Role</th>
+              <th className="text-left p-3 w-[160px]">Action</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td className="p-3 text-slate-500" colSpan={2}>Loading…</td>
+                <td className="p-3 text-slate-500" colSpan={3}>Loading…</td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td className="p-3 text-slate-500" colSpan={2}>No users.</td>
+                <td className="p-3 text-slate-500" colSpan={3}>No users.</td>
               </tr>
             ) : (
-              users.map((u) => (
-                <tr key={u.id} className="border-t">
-                  <td className="p-3">{u.email}</td>
-                  <td className="p-3">
-                    <select
-                      className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
-                      value={String(u.job_role_id ?? "")}
-                      onChange={(e) => updateRole(u.id, e.target.value || "")}
-                      disabled={noRoles}
-                    >
-                      <option value="">—</option>
-                      {roles.map(r => (
-                        <option key={String(r.id)} value={String(r.id)}>
-                          {r.role}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))
+              users.map((u) => {
+                const staged = draft[u.id] ?? "";
+                return (
+                  <tr key={u.id} className="border-t">
+                    <td className="p-3">{u.email}</td>
+                    <td className="p-3">
+                      <select
+                        className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
+                        value={staged}
+                        onChange={(e) => onSelectChange(u.id, e.target.value)}
+                        disabled={noRoles}
+                      >
+                        <option value="">—</option>
+                        {roles.map(r => (
+                          <option key={String(r.id)} value={String(r.id)}>
+                            {r.role}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-3">
+                      <button
+                        onClick={() => saveOne(u)}
+                        className="px-4 py-1.5 rounded-full text-sm bg-[#057e7f] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!isDirty(u)}
+                      >
+                        Save
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -2991,6 +3041,7 @@ function AdminRoles_Assign() {
     </div>
   );
 }
+
 
 
 
