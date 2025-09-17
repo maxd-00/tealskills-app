@@ -2887,87 +2887,47 @@ function AdminRoles_Assign() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // mode = "id" (profiles.job_role_id) | "name" (profiles.job_role)
-  const [mode, setMode] = useState(null);
-
-  // Brouillon local : userId -> selected value (string)
-  // - si mode "id"  : roleId (UUID/num) ou ""
-  // - si mode "name": roleName (string) ou ""
+  // Brouillon local : userId -> selectedRoleId (UUID string) ou ""
   const [draft, setDraft] = useState({});
 
   const { setToast } = useToast?.() || { setToast: () => {} };
 
   useEffect(() => { load(); }, []);
 
-  async function detectMode() {
-    // Tente d'abord job_role_id
-    let m = null;
-
-    try {
-      const test1 = await supabase
-        .from("profiles")
-        .select("id,email,job_role_id")
-        .limit(1);
-      if (!test1.error) m = "id";
-    } catch (_) {}
-
-    if (!m) {
-      try {
-        const test2 = await supabase
-          .from("profiles")
-          .select("id,email,job_role")
-          .limit(1);
-        if (!test2.error) m = "name";
-      } catch (_) {}
-    }
-
-    if (!m) {
-      throw new Error(
-        "Neither profiles.job_role_id nor profiles.job_role exists. Please add one of these columns."
-      );
-    }
-    return m;
-  }
-
   async function load() {
     try {
       setLoading(true);
 
-      const m = await detectMode();
-      setMode(m);
+      // 1) Charge les rôles (source de vérité pour nom <-> id)
+      const rres = await supabase
+        .from("roles_definitions")
+        .select("id, role")
+        .order("role", { ascending: true });
+      if (rres.error) throw rres.error;
+      const rolesData = rres.data || [];
+      setRoles(rolesData);
 
-      // Charge utilisateurs selon le mode
-      let ures;
-      if (m === "id") {
-        ures = await supabase
-          .from("profiles")
-          .select("id,email,job_role_id")
-          .order("email", { ascending: true });
-      } else {
-        ures = await supabase
-          .from("profiles")
-          .select("id,email,job_role")
-          .order("email", { ascending: true });
-      }
+      // 2) Charge les utilisateurs (on lit les deux colonnes)
+      const ures = await supabase
+        .from("profiles")
+        .select("id, email, job_role_id, job_role")
+        .order("email", { ascending: true });
       if (ures.error) throw ures.error;
       const usersData = ures.data || [];
       setUsers(usersData);
 
-      // Charge rôles (source-of-truth)
-      const rres = await supabase
-        .from("roles_definitions")
-        .select("id,role")
-        .order("role", { ascending: true });
-      if (rres.error) throw rres.error;
-      setRoles(rres.data || []);
-
-      // Initialise le brouillon depuis la DB
+      // 3) Initialise le brouillon:
+      //    - si job_role_id est présent => on l’utilise
+      //    - sinon, on tente de mapper job_role (texte) vers l’id d’un rôle existant
+      const nameToId = new Map(rolesData.map(r => [String(r.role), String(r.id)]));
       const init = {};
-      for (const user of usersData) {
-        if (m === "id") {
-          init[user.id] = user.job_role_id ? String(user.job_role_id) : "";
+      for (const u of usersData) {
+        if (u.job_role_id) {
+          init[u.id] = String(u.job_role_id);
+        } else if (u.job_role && nameToId.has(String(u.job_role))) {
+          init[u.id] = nameToId.get(String(u.job_role)) || "";
         } else {
-          init[user.id] = user.job_role ? String(user.job_role) : "";
+          init[u.id] = "";
         }
       }
       setDraft(init);
@@ -2980,39 +2940,51 @@ function AdminRoles_Assign() {
   }
 
   function onSelectChange(userId, val) {
-    setDraft(prev => ({ ...prev, [userId]: val })); // val = "" | roleId | roleName
+    setDraft(prev => ({ ...prev, [userId]: val })); // val = "" ou roleId (UUID string)
   }
 
-  function currentValueFromDB(user) {
-    if (mode === "id") return user.job_role_id ? String(user.job_role_id) : "";
-    return user.job_role ? String(user.job_role) : "";
+  // Valeur actuelle "DB" projetée en roleId (pour détecter si brouillon différent)
+  function currentRoleIdFromDB(user) {
+    if (user.job_role_id) return String(user.job_role_id);
+    // fallback: map from job_role (texte) -> id si possible
+    const r = roles.find(x => String(x.role) === String(user.job_role || ""));
+    return r ? String(r.id) : "";
+    // si aucun mapping trouvé, on considère vide
   }
 
   function isDirty(user) {
-    const current = currentValueFromDB(user);
+    const current = currentRoleIdFromDB(user);
     const staged  = draft[user.id] ?? "";
     return current !== staged;
   }
 
+  // util: map id -> name
+  function roleNameById(roleId) {
+    const r = roles.find(x => String(x.id) === String(roleId));
+    return r ? String(r.role) : null;
+  }
+
   async function saveOne(user) {
-    if (!mode) return;
     const staged = draft[user.id] ?? "";
     const payload =
-      mode === "id"
-        ? { job_role_id: staged || null } // UUID/num ou null
-        : { job_role: staged || null };   // nom de rôle ou null
+      staged === ""
+        ? { job_role_id: null, job_role: null }
+        : { job_role_id: staged, job_role: roleNameById(staged) };
 
     try {
       setSaving(true);
-      const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update(payload)                 // ← écrit dans LES DEUX colonnes
+        .eq("id", user.id);
       if (error) throw error;
 
-      // Optimiste local…
+      // Optimiste local + resync
       setUsers(list =>
         list.map(u => (u.id === user.id ? { ...u, ...payload } : u))
       );
 
-      // … puis reload DB pour afficher l'état réel
+      // Recharge depuis la DB pour refléter l’état réel (évite toute désynchro)
       await load();
 
       setToast("Role updated");
@@ -3026,19 +2998,21 @@ function AdminRoles_Assign() {
   }
 
   async function saveAll() {
-    if (!mode) return;
     try {
       setSaving(true);
-      const dirty = users.filter(isDirty);
+      const dirtyUsers = users.filter(isDirty);
 
-      for (const u of dirty) {
+      for (const u of dirtyUsers) {
         const staged = draft[u.id] ?? "";
         const payload =
-          mode === "id"
-            ? { job_role_id: staged || null }
-            : { job_role: staged || null };
+          staged === ""
+            ? { job_role_id: null, job_role: null }
+            : { job_role_id: staged, job_role: roleNameById(staged) };
 
-        const { error } = await supabase.from("profiles").update(payload).eq("id", u.id);
+        const { error } = await supabase
+          .from("profiles")
+          .update(payload)               // ← écrit dans LES DEUX colonnes
+          .eq("id", u.id);
         if (error) throw error;
       }
 
@@ -3056,13 +3030,6 @@ function AdminRoles_Assign() {
   const noRoles = roles.length === 0;
   const anyDirty = users.some(isDirty);
 
-  // Valeurs d'option selon le mode:
-  // - mode "id"   -> option.value = role.id (string)
-  // - mode "name" -> option.value = role.role (nom du rôle)
-  function optionValue(r) {
-    return mode === "id" ? String(r.id) : String(r.role);
-  }
-
   return (
     <div className="grid gap-6">
       {/* Actions globales */}
@@ -3075,11 +3042,9 @@ function AdminRoles_Assign() {
         >
           {saving ? "Saving…" : "Save all changes"}
         </button>
-        {mode && (
-          <span className="text-xs text-slate-500">
-            Mode: <code>{mode === "id" ? "job_role_id (FK)" : "job_role (text)"}</code>
-          </span>
-        )}
+        <span className="text-xs text-slate-500">
+          Dual-write: <code>job_role_id</code> + <code>job_role</code>
+        </span>
         {noRoles && (
           <div className="px-4 py-2 rounded-lg bg-amber-50 text-amber-800">
             Define roles first in “Definition of roles”.
@@ -3094,7 +3059,7 @@ function AdminRoles_Assign() {
             <tr>
               <th className="text-left p-3 w-[50%]">Email</th>
               <th className="text-left p-3">Role</th>
-              <th className="text-left p-3 w-[160px]">Action</th>
+              <th className="text-left p-3 w-[200px]">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -3118,24 +3083,35 @@ function AdminRoles_Assign() {
                         className="border rounded-md p-2 bg-white text-black border-[#057e7f] focus:ring-2 focus:ring-[#057e7f]"
                         value={staged}
                         onChange={(e) => onSelectChange(u.id, e.target.value)}
-                        disabled={noRoles || saving || !mode}
+                        disabled={noRoles || saving}
                       >
                         <option value="">—</option>
                         {roles.map(r => (
-                          <option key={optionValue(r)} value={optionValue(r)}>
+                          <option key={String(r.id)} value={String(r.id)}>
                             {r.role}
                           </option>
                         ))}
                       </select>
                     </td>
                     <td className="p-3">
-                      <button
-                        onClick={() => saveOne(u)}
-                        className="px-4 py-1.5 rounded-full text-sm bg-[#057e7f] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!dirty || saving || !mode}
-                      >
-                        {saving && dirty ? "Saving…" : "Save"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => saveOne(u)}
+                          className="px-4 py-1.5 rounded-full text-sm bg-[#057e7f] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={!dirty || saving}
+                        >
+                          {saving && dirty ? "Saving…" : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onSelectChange(u.id, "")}
+                          className="px-3 py-1.5 rounded-full text-sm bg-slate-100 hover:bg-slate-200"
+                          disabled={saving}
+                          title="Clear (no role)"
+                        >
+                          Clear
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -3147,6 +3123,7 @@ function AdminRoles_Assign() {
     </div>
   );
 }
+
 
 
 
