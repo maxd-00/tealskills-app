@@ -2898,7 +2898,7 @@ function AdminRoles_Assign() {
     try {
       setLoading(true);
 
-      // 1) Charge les rôles (source de vérité pour nom <-> id)
+      // 1) Rôles (mapping id<->name)
       const rres = await supabase
         .from("roles_definitions")
         .select("id, role")
@@ -2907,7 +2907,7 @@ function AdminRoles_Assign() {
       const rolesData = rres.data || [];
       setRoles(rolesData);
 
-      // 2) Charge les utilisateurs (on lit les deux colonnes)
+      // 2) Users (on lit les deux colonnes)
       const ures = await supabase
         .from("profiles")
         .select("id, email, job_role_id, job_role")
@@ -2916,19 +2916,13 @@ function AdminRoles_Assign() {
       const usersData = ures.data || [];
       setUsers(usersData);
 
-      // 3) Initialise le brouillon:
-      //    - si job_role_id est présent => on l’utilise
-      //    - sinon, on tente de mapper job_role (texte) vers l’id d’un rôle existant
+      // 3) Init du brouillon à partir de la DB
       const nameToId = new Map(rolesData.map(r => [String(r.role), String(r.id)]));
       const init = {};
       for (const u of usersData) {
-        if (u.job_role_id) {
-          init[u.id] = String(u.job_role_id);
-        } else if (u.job_role && nameToId.has(String(u.job_role))) {
-          init[u.id] = nameToId.get(String(u.job_role)) || "";
-        } else {
-          init[u.id] = "";
-        }
+        if (u.job_role_id) init[u.id] = String(u.job_role_id);
+        else if (u.job_role && nameToId.has(String(u.job_role))) init[u.id] = nameToId.get(String(u.job_role));
+        else init[u.id] = "";
       }
       setDraft(init);
     } catch (e) {
@@ -2943,13 +2937,16 @@ function AdminRoles_Assign() {
     setDraft(prev => ({ ...prev, [userId]: val })); // val = "" ou roleId (UUID string)
   }
 
-  // Valeur actuelle "DB" projetée en roleId (pour détecter si brouillon différent)
+  function roleNameById(roleId) {
+    const r = roles.find(x => String(x.id) === String(roleId));
+    return r ? String(r.role) : null;
+  }
+
+  // Role courant projeté en roleId (pour savoir si modifié)
   function currentRoleIdFromDB(user) {
     if (user.job_role_id) return String(user.job_role_id);
-    // fallback: map from job_role (texte) -> id si possible
     const r = roles.find(x => String(x.role) === String(user.job_role || ""));
     return r ? String(r.id) : "";
-    // si aucun mapping trouvé, on considère vide
   }
 
   function isDirty(user) {
@@ -2958,35 +2955,29 @@ function AdminRoles_Assign() {
     return current !== staged;
   }
 
-  // util: map id -> name
-  function roleNameById(roleId) {
-    const r = roles.find(x => String(x.id) === String(roleId));
-    return r ? String(r.role) : null;
-  }
-
+  // --- SAVE par ligne via RPC (dual-write job_role_id + job_role) ---
   async function saveOne(user) {
     const staged = draft[user.id] ?? "";
-    const payload =
-      staged === ""
-        ? { job_role_id: null, job_role: null }
-        : { job_role_id: staged, job_role: roleNameById(staged) };
+    const roleId   = staged || null;
+    const roleName = staged ? roleNameById(staged) : null;
 
     try {
       setSaving(true);
-      const { error } = await supabase
-        .from("profiles")
-        .update(payload)                 // ← écrit dans LES DEUX colonnes
-        .eq("id", user.id);
+
+      // ⚡ RPC = contourne RLS (security definer) tout en vérifiant is_admin()
+      const { error } = await supabase.rpc("admin_set_user_role", {
+        p_user_id: user.id,
+        p_role_id: roleId,
+        p_role_name: roleName,
+      });
       if (error) throw error;
 
-      // Optimiste local + resync
+      // Optimiste + resync
       setUsers(list =>
-        list.map(u => (u.id === user.id ? { ...u, ...payload } : u))
+        list.map(u => (u.id === user.id ? { ...u, job_role_id: roleId, job_role: roleName } : u))
       );
 
-      // Recharge depuis la DB pour refléter l’état réel (évite toute désynchro)
-      await load();
-
+      await load(); // relit la DB
       setToast("Role updated");
       setTimeout(() => setToast(""), 1100);
     } catch (e) {
@@ -3004,15 +2995,14 @@ function AdminRoles_Assign() {
 
       for (const u of dirtyUsers) {
         const staged = draft[u.id] ?? "";
-        const payload =
-          staged === ""
-            ? { job_role_id: null, job_role: null }
-            : { job_role_id: staged, job_role: roleNameById(staged) };
+        const roleId   = staged || null;
+        const roleName = staged ? roleNameById(staged) : null;
 
-        const { error } = await supabase
-          .from("profiles")
-          .update(payload)               // ← écrit dans LES DEUX colonnes
-          .eq("id", u.id);
+        const { error } = await supabase.rpc("admin_set_user_role", {
+          p_user_id: u.id,
+          p_role_id: roleId,
+          p_role_name: roleName,
+        });
         if (error) throw error;
       }
 
@@ -3043,7 +3033,7 @@ function AdminRoles_Assign() {
           {saving ? "Saving…" : "Save all changes"}
         </button>
         <span className="text-xs text-slate-500">
-          Dual-write: <code>job_role_id</code> + <code>job_role</code>
+          Dual-write via RPC: <code>job_role_id</code> + <code>job_role</code>
         </span>
         {noRoles && (
           <div className="px-4 py-2 rounded-lg bg-amber-50 text-amber-800">
@@ -3123,6 +3113,7 @@ function AdminRoles_Assign() {
     </div>
   );
 }
+
 
 
 
