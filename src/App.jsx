@@ -3032,9 +3032,6 @@ function AdminRoles_Assign() {
         >
           {saving ? "Saving…" : "Save all changes"}
         </button>
-        <span className="text-xs text-slate-500">
-          Dual-write via RPC: <code>job_role_id</code> + <code>job_role</code>
-        </span>
         {noRoles && (
           <div className="px-4 py-2 rounded-lg bg-amber-50 text-amber-800">
             Define roles first in “Definition of roles”.
