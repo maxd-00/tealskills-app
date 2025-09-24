@@ -3824,14 +3824,20 @@ function ProfilePage() {
 
   const [loading, setLoading] = useState(true);
 
+  // Données affichées (lecture seule)
   const [missions, setMissions] = useState([]);
   const [trainings, setTrainings] = useState([]);
   const [internals, setInternals] = useState([]);
 
-  // Helpers
-  const tmpId = () => (crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+  // Brouillons en cours d’édition (clé = id)
+  const [draftMissions, setDraftMissions] = useState({});
+  const [draftTrainings, setDraftTrainings] = useState({});
+  const [draftInternals, setDraftInternals] = useState({});
 
-  // Load data
+  const tmpId = (pfx) =>
+    `${pfx}_${(typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`;
+
+  // Chargement initial
   useEffect(() => {
     if (!userId) return;
     (async () => {
@@ -3851,110 +3857,7 @@ function ProfilePage() {
     })();
   }, [userId]);
 
-  // ========= MISSIONS =========
-  const addMission = () => {
-    setMissions((arr) => [
-      { id: "tmp_" + tmpId(), isNew: true, mission: "", client_name: "", period_start: "", period_end: "", description: "", goals: "", activities: "", key_deliverables: "" },
-      ...arr,
-    ]);
-  };
-  const changeMission = (id, field, value) => {
-    setMissions((arr) => arr.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
-  };
-  const saveMission = async (row) => {
-    if (!userId) return;
-    const payload = {
-      mission: row.mission || null,
-      client_name: row.client_name || null,
-      period_start: row.period_start || null,
-      period_end: row.period_end || null,
-      description: row.description || null,
-      goals: row.goals || null,
-      activities: row.activities || null,
-      key_deliverables: row.key_deliverables || null,
-      user_id: userId,
-    };
-    if (row.isNew) {
-      const { data, error } = await supabase.from("missions").insert([payload]).select("*").single();
-      if (error) return alert("Save failed: " + error.message);
-      setMissions((arr) => arr.map((r) => (r.id === row.id ? data : r)));
-    } else {
-      const { data, error } = await supabase.from("missions").update(payload).eq("id", row.id).eq("user_id", userId).select("*").single();
-      if (error) return alert("Update failed: " + error.message);
-      setMissions((arr) => arr.map((r) => (r.id === row.id ? data : r)));
-    }
-  };
-  const deleteMission = async (row) => {
-    if (row.isNew) {
-      setMissions((arr) => arr.filter((r) => r.id !== row.id));
-      return;
-    }
-    const { error } = await supabase.from("missions").delete().eq("id", row.id).eq("user_id", userId);
-    if (error) return alert("Delete failed: " + error.message);
-    setMissions((arr) => arr.filter((r) => r.id !== row.id));
-  };
-
-  // ========= TRAININGS =========
-  const addTraining = () => {
-    setTrainings((arr) => [{ id: "tmp_" + tmpId(), isNew: true, name: "", date: "" }, ...arr]);
-  };
-  const changeTraining = (id, field, value) => {
-    setTrainings((arr) => arr.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
-  };
-  const saveTraining = async (row) => {
-    if (!userId) return;
-    const payload = { name: row.name || null, date: row.date || null, user_id: userId };
-    if (row.isNew) {
-      const { data, error } = await supabase.from("trainings").insert([payload]).select("*").single();
-      if (error) return alert("Save failed: " + error.message);
-      setTrainings((arr) => arr.map((r) => (r.id === row.id ? data : r)));
-    } else {
-      const { data, error } = await supabase.from("trainings").update(payload).eq("id", row.id).eq("user_id", userId).select("*").single();
-      if (error) return alert("Update failed: " + error.message);
-      setTrainings((arr) => arr.map((r) => (r.id === row.id ? data : r)));
-    }
-  };
-  const deleteTraining = async (row) => {
-    if (row.isNew) {
-      setTrainings((arr) => arr.filter((r) => r.id !== row.id));
-      return;
-    }
-    const { error } = await supabase.from("trainings").delete().eq("id", row.id).eq("user_id", userId);
-    if (error) return alert("Delete failed: " + error.message);
-    setTrainings((arr) => arr.filter((r) => r.id !== row.id));
-  };
-
-  // ========= INTERNAL CONTRIBUTIONS =========
-  const addInternal = () => {
-    setInternals((arr) => [{ id: "tmp_" + tmpId(), isNew: true, name: "", date: "" }, ...arr]);
-  };
-  const changeInternal = (id, field, value) => {
-    setInternals((arr) => arr.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
-  };
-  const saveInternal = async (row) => {
-    if (!userId) return;
-    const payload = { name: row.name || null, date: row.date || null, user_id: userId };
-    if (row.isNew) {
-      const { data, error } = await supabase.from("internal_contributions").insert([payload]).select("*").single();
-      if (error) return alert("Save failed: " + error.message);
-      setInternals((arr) => arr.map((r) => (r.id === row.id ? data : r)));
-    } else {
-      const { data, error } = await supabase.from("internal_contributions").update(payload).eq("id", row.id).eq("user_id", userId).select("*").single();
-      if (error) return alert("Update failed: " + error.message);
-      setInternals((arr) => arr.map((r) => (r.id === row.id ? data : r)));
-    }
-  };
-  const deleteInternal = async (row) => {
-    if (row.isNew) {
-      setInternals((arr) => arr.filter((r) => r.id !== row.id));
-      return;
-    }
-    const { error } = await supabase.from("internal_contributions").delete().eq("id", row.id).eq("user_id", userId);
-    if (error) return alert("Delete failed: " + error.message);
-    setInternals((arr) => arr.filter((r) => r.id !== row.id));
-  };
-
-  // UI helpers
+  // ---------- Helpers UI ----------
   const Section = ({ title, action, children }) => (
     <div className="bg-white rounded-2xl shadow p-4">
       <div className="flex items-center justify-between mb-3">
@@ -3967,16 +3870,419 @@ function ProfilePage() {
     </div>
   );
 
-  const RowActions = ({ onSave, onDelete }) => (
-    <div className="flex items-center gap-2">
-      <button onClick={onSave} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
-        Save
-      </button>
-      <button onClick={onDelete} className="px-3 py-1.5 rounded-full bg-red-600 text-white hover:opacity-90 text-sm">
-        Delete
-      </button>
+  const IconButton = ({ title, onClick, children, className = "" }) => (
+    <button
+      title={title}
+      onClick={onClick}
+      className={`p-2 rounded-md hover:bg-slate-100 text-slate-600 ${className}`}
+    >
+      {children}
+    </button>
+  );
+
+  const FieldDisplay = ({ label, value }) => (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="text-[15px]">{value || <span className="text-slate-400">—</span>}</div>
     </div>
   );
+
+  // ========== MISSIONS ==========
+  const startAddMission = () => {
+    const id = tmpId("new_m");
+    setDraftMissions((d) => ({
+      ...d,
+      [id]: {
+        id,
+        mission: "",
+        client_name: "",
+        period_start: "",
+        period_end: "",
+        description: "",
+        goals: "",
+        activities: "",
+        key_deliverables: "",
+        __isNew: true,
+      },
+    }));
+  };
+
+  const startEditMission = (row) => {
+    setDraftMissions((d) => ({
+      ...d,
+      [row.id]: {
+        id: row.id,
+        mission: row.mission || "",
+        client_name: row.client_name || "",
+        period_start: row.period_start || "",
+        period_end: row.period_end || "",
+        description: row.description || "",
+        goals: row.goals || "",
+        activities: row.activities || "",
+        key_deliverables: row.key_deliverables || "",
+        __isNew: false,
+      },
+    }));
+  };
+
+  const changeDraftMission = (id, field, value) => {
+    setDraftMissions((d) => ({ ...d, [id]: { ...d[id], [field]: value } }));
+  };
+
+  const saveDraftMission = async (id) => {
+    if (!userId) return;
+    const draft = draftMissions[id];
+    const payload = {
+      mission: draft.mission || null,
+      client_name: draft.client_name || null,
+      period_start: draft.period_start || null,
+      period_end: draft.period_end || null,
+      description: draft.description || null,
+      goals: draft.goals || null,
+      activities: draft.activities || null,
+      key_deliverables: draft.key_deliverables || null,
+      user_id: userId,
+    };
+
+    if (draft.__isNew) {
+      const { data, error } = await supabase.from("missions").insert([payload]).select("*").single();
+      if (error) return alert("Save failed: " + error.message);
+      setMissions((arr) => [data, ...arr]);
+    } else {
+      const { data, error } = await supabase.from("missions").update(payload).eq("id", id).eq("user_id", userId).select("*").single();
+      if (error) return alert("Update failed: " + error.message);
+      setMissions((arr) => arr.map((r) => (r.id === id ? data : r)));
+    }
+    setDraftMissions((d) => {
+      const copy = { ...d };
+      delete copy[id];
+      return copy;
+    });
+  };
+
+  const deleteMission = async (row) => {
+    const ok = confirm("Delete this mission?");
+    if (!ok) return;
+    const { error } = await supabase.from("missions").delete().eq("id", row.id).eq("user_id", userId);
+    if (error) return alert("Delete failed: " + error.message);
+    setMissions((arr) => arr.filter((r) => r.id !== row.id));
+  };
+
+  const renderMissionEditor = (draft) => (
+    <div key={draft.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label className="grid gap-1">
+          <span className="text-sm text-slate-600">Mission</span>
+          <input
+            type="text"
+            className="border rounded-md p-2"
+            value={draft.mission}
+            onChange={(e) => changeDraftMission(draft.id, "mission", e.target.value)}
+            placeholder="Ex: Data platform migration"
+          />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-sm text-slate-600">Client's name</span>
+          <input
+            type="text"
+            className="border rounded-md p-2"
+            value={draft.client_name}
+            onChange={(e) => changeDraftMission(draft.id, "client_name", e.target.value)}
+            placeholder="Ex: Acme Corp"
+          />
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label className="grid gap-1">
+          <span className="text-sm text-slate-600">Period — Start</span>
+          <input
+            type="date"
+            className="border rounded-md p-2"
+            value={draft.period_start}
+            onChange={(e) => changeDraftMission(draft.id, "period_start", e.target.value)}
+          />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-sm text-slate-600">Period — End</span>
+          <input
+            type="date"
+            className="border rounded-md p-2"
+            value={draft.period_end}
+            onChange={(e) => changeDraftMission(draft.id, "period_end", e.target.value)}
+          />
+        </label>
+      </div>
+
+      <label className="grid gap-1">
+        <span className="text-sm text-slate-600">Description</span>
+        <textarea
+          rows={3}
+          className="border rounded-md p-2"
+          value={draft.description}
+          onChange={(e) => changeDraftMission(draft.id, "description", e.target.value)}
+        />
+      </label>
+
+      <label className="grid gap-1">
+        <span className="text-sm text-slate-600">Goals</span>
+        <textarea
+          rows={3}
+          className="border rounded-md p-2"
+          value={draft.goals}
+          onChange={(e) => changeDraftMission(draft.id, "goals", e.target.value)}
+        />
+      </label>
+
+      <label className="grid gap-1">
+        <span className="text-sm text-slate-600">Activities</span>
+        <textarea
+          rows={3}
+          className="border rounded-md p-2"
+          value={draft.activities}
+          onChange={(e) => changeDraftMission(draft.id, "activities", e.target.value)}
+        />
+      </label>
+
+      <label className="grid gap-1">
+        <span className="text-sm text-slate-600">Key deliverables</span>
+        <textarea
+          rows={3}
+          className="border rounded-md p-2"
+          value={draft.key_deliverables}
+          onChange={(e) => changeDraftMission(draft.id, "key_deliverables", e.target.value)}
+        />
+      </label>
+
+      <div className="flex justify-end">
+        <button onClick={() => saveDraftMission(draft.id)} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+          Save
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderMissionView = (row) => (
+    <div key={row.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+      <div className="flex items-start justify-between">
+        <div className="font-medium">{row.mission || "Untitled mission"}</div>
+        <div className="flex items-center gap-1">
+          {/* Pencil */}
+          <IconButton title="Edit" onClick={() => startEditMission(row)}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 4h2m2 0h2m-6 16h6M4 20h4m10-8l2-2a2.828 2.828 0 10-4-4l-2 2M12 12l6-6" />
+            </svg>
+          </IconButton>
+          {/* X */}
+          <IconButton title="Delete" onClick={() => deleteMission(row)} className="text-red-600 hover:bg-red-50">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </IconButton>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <FieldDisplay label="Client's name" value={row.client_name} />
+        <FieldDisplay
+          label="Period"
+          value={
+            row.period_start || row.period_end
+              ? `${row.period_start || "?"} → ${row.period_end || "?"}`
+              : ""
+          }
+        />
+      </div>
+      <FieldDisplay label="Description" value={row.description} />
+      <FieldDisplay label="Goals" value={row.goals} />
+      <FieldDisplay label="Activities" value={row.activities} />
+      <FieldDisplay label="Key deliverables" value={row.key_deliverables} />
+    </div>
+  );
+
+  // ========== TRAININGS ==========
+  const startAddTraining = () => {
+    const id = tmpId("new_t");
+    setDraftTrainings((d) => ({ ...d, [id]: { id, name: "", date: "", __isNew: true } }));
+  };
+  const startEditTraining = (row) => {
+    setDraftTrainings((d) => ({ ...d, [row.id]: { id: row.id, name: row.name || "", date: row.date || "", __isNew: false } }));
+  };
+  const changeDraftTraining = (id, field, value) => {
+    setDraftTrainings((d) => ({ ...d, [id]: { ...d[id], [field]: value } }));
+  };
+  const saveDraftTraining = async (id) => {
+    if (!userId) return;
+    const draft = draftTrainings[id];
+    const payload = { name: draft.name || null, date: draft.date || null, user_id: userId };
+    if (draft.__isNew) {
+      const { data, error } = await supabase.from("trainings").insert([payload]).select("*").single();
+      if (error) return alert("Save failed: " + error.message);
+      setTrainings((arr) => [data, ...arr]);
+    } else {
+      const { data, error } = await supabase.from("trainings").update(payload).eq("id", id).eq("user_id", userId).select("*").single();
+      if (error) return alert("Update failed: " + error.message);
+      setTrainings((arr) => arr.map((r) => (r.id === id ? data : r)));
+    }
+    setDraftTrainings((d) => {
+      const copy = { ...d };
+      delete copy[id];
+      return copy;
+    });
+  };
+  const deleteTraining = async (row) => {
+    const ok = confirm("Delete this training?");
+    if (!ok) return;
+    const { error } = await supabase.from("trainings").delete().eq("id", row.id).eq("user_id", userId);
+    if (error) return alert("Delete failed: " + error.message);
+    setTrainings((arr) => arr.filter((r) => r.id !== row.id));
+  };
+  const renderTrainingEditor = (draft) => (
+    <div key={draft.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label className="grid gap-1">
+          <span className="text-sm text-slate-600">Training's name</span>
+          <input
+            type="text"
+            className="border rounded-md p-2"
+            value={draft.name}
+            onChange={(e) => changeDraftTraining(draft.id, "name", e.target.value)}
+            placeholder="Ex: Advanced React"
+          />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-sm text-slate-600">Date</span>
+          <input
+            type="date"
+            className="border rounded-md p-2"
+            value={draft.date}
+            onChange={(e) => changeDraftTraining(draft.id, "date", e.target.value)}
+          />
+        </label>
+      </div>
+      <div className="flex justify-end">
+        <button onClick={() => saveDraftTraining(draft.id)} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+          Save
+        </button>
+      </div>
+    </div>
+  );
+  const renderTrainingView = (row) => (
+    <div key={row.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+      <div className="flex items-start justify-between">
+        <div className="font-medium">{row.name || "Untitled training"}</div>
+        <div className="flex items-center gap-1">
+          <IconButton title="Edit" onClick={() => startEditTraining(row)}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 4h2m2 0h2m-6 16h6M4 20h4m10-8l2-2a2.828 2.828 0 10-4-4l-2 2M12 12l6-6" />
+            </svg>
+          </IconButton>
+          <IconButton title="Delete" onClick={() => deleteTraining(row)} className="text-red-600 hover:bg-red-50">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </IconButton>
+        </div>
+      </div>
+      <FieldDisplay label="Date" value={row.date} />
+    </div>
+  );
+
+  // ========== TEALS CONTRIBUTIONS ==========
+  const startAddInternal = () => {
+    const id = tmpId("new_i");
+    setDraftInternals((d) => ({ ...d, [id]: { id, name: "", date: "", __isNew: true } }));
+  };
+  const startEditInternal = (row) => {
+    setDraftInternals((d) => ({ ...d, [row.id]: { id: row.id, name: row.name || "", date: row.date || "", __isNew: false } }));
+  };
+  const changeDraftInternal = (id, field, value) => {
+    setDraftInternals((d) => ({ ...d, [id]: { ...d[id], [field]: value } }));
+  };
+  const saveDraftInternal = async (id) => {
+    if (!userId) return;
+    const draft = draftInternals[id];
+    const payload = { name: draft.name || null, date: draft.date || null, user_id: userId };
+    if (draft.__isNew) {
+      const { data, error } = await supabase.from("internal_contributions").insert([payload]).select("*").single();
+      if (error) return alert("Save failed: " + error.message);
+      setInternals((arr) => [data, ...arr]);
+    } else {
+      const { data, error } = await supabase.from("internal_contributions").update(payload).eq("id", id).eq("user_id", userId).select("*").single();
+      if (error) return alert("Update failed: " + error.message);
+      setInternals((arr) => arr.map((r) => (r.id === id ? data : r)));
+    }
+    setDraftInternals((d) => {
+      const copy = { ...d };
+      delete copy[id];
+      return copy;
+    });
+  };
+  const deleteInternal = async (row) => {
+    const ok = confirm("Delete this contribution?");
+    if (!ok) return;
+    const { error } = await supabase.from("internal_contributions").delete().eq("id", row.id).eq("user_id", userId);
+    if (error) return alert("Delete failed: " + error.message);
+    setInternals((arr) => arr.filter((r) => r.id !== row.id));
+  };
+  const renderInternalEditor = (draft) => (
+    <div key={draft.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label className="grid gap-1">
+          <span className="text-sm text-slate-600">Contribution's name</span>
+          <input
+            type="text"
+            className="border rounded-md p-2"
+            value={draft.name}
+            onChange={(e) => changeDraftInternal(draft.id, "name", e.target.value)}
+            placeholder="Ex: Hiring sprint, OSS contribution..."
+          />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-sm text-slate-600">Date</span>
+          <input
+            type="date"
+            className="border rounded-md p-2"
+            value={draft.date}
+            onChange={(e) => changeDraftInternal(draft.id, "date", e.target.value)}
+          />
+        </label>
+      </div>
+      <div className="flex justify-end">
+        <button onClick={() => saveDraftInternal(draft.id)} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+          Save
+        </button>
+      </div>
+    </div>
+  );
+  const renderInternalView = (row) => (
+    <div key={row.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+      <div className="flex items-start justify-between">
+        <div className="font-medium">{row.name || "Untitled contribution"}</div>
+        <div className="flex items-center gap-1">
+          <IconButton title="Edit" onClick={() => startEditInternal(row)}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 4h2m2 0h2m-6 16h6M4 20h4m10-8l2-2a2.828 2.828 0 10-4-4l-2 2M12 12l6-6" />
+            </svg>
+          </IconButton>
+          <IconButton title="Delete" onClick={() => deleteInternal(row)} className="text-red-600 hover:bg-red-50">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </IconButton>
+        </div>
+      </div>
+      <FieldDisplay label="Date" value={row.date} />
+    </div>
+  );
+
+  // ---------- Rendu ----------
+  // On veut afficher d’abord les brouillons (nouveaux) puis les entrées existantes.
+  const draftMissionList = Object.values(draftMissions).filter((d) => d.__isNew);
+  const editingMissionExisting = Object.values(draftMissions).filter((d) => !d.__isNew);
+  const draftTrainingList = Object.values(draftTrainings).filter((d) => d.__isNew);
+  const editingTrainingExisting = Object.values(draftTrainings).filter((d) => !d.__isNew);
+  const draftInternalList = Object.values(draftInternals).filter((d) => d.__isNew);
+  const editingInternalExisting = Object.values(draftInternals).filter((d) => !d.__isNew);
 
   return (
     <section className="space-y-6">
@@ -3990,171 +4296,47 @@ function ProfilePage() {
       ) : (
         <>
           {/* MISSIONS */}
-          <Section title="Missions" action={addMission}>
-            {missions.length === 0 && <div className="text-sm text-slate-500">No missions yet.</div>}
-            {missions.map((row) => (
-              <div key={row.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="grid gap-1">
-                    <span className="text-sm text-slate-600">Mission</span>
-                    <input
-                      type="text"
-                      className="border rounded-md p-2"
-                      value={row.mission || ""}
-                      onChange={(e) => changeMission(row.id, "mission", e.target.value)}
-                      placeholder="Ex: Data platform migration"
-                    />
-                  </label>
-                  <label className="grid gap-1">
-                    <span className="text-sm text-slate-600">Client's name</span>
-                    <input
-                      type="text"
-                      className="border rounded-md p-2"
-                      value={row.client_name || ""}
-                      onChange={(e) => changeMission(row.id, "client_name", e.target.value)}
-                      placeholder="Ex: Acme Corp"
-                    />
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="grid gap-1">
-                    <span className="text-sm text-slate-600">Period — Start</span>
-                    <input
-                      type="date"
-                      className="border rounded-md p-2"
-                      value={row.period_start || ""}
-                      onChange={(e) => changeMission(row.id, "period_start", e.target.value)}
-                    />
-                  </label>
-                  <label className="grid gap-1">
-                    <span className="text-sm text-slate-600">Period — End</span>
-                    <input
-                      type="date"
-                      className="border rounded-md p-2"
-                      value={row.period_end || ""}
-                      onChange={(e) => changeMission(row.id, "period_end", e.target.value)}
-                    />
-                  </label>
-                </div>
-
-                <label className="grid gap-1">
-                  <span className="text-sm text-slate-600">Description</span>
-                  <textarea
-                    rows={3}
-                    className="border rounded-md p-2"
-                    value={row.description || ""}
-                    onChange={(e) => changeMission(row.id, "description", e.target.value)}
-                  />
-                </label>
-
-                <label className="grid gap-1">
-                  <span className="text-sm text-slate-600">Goals</span>
-                  <textarea
-                    rows={3}
-                    className="border rounded-md p-2"
-                    value={row.goals || ""}
-                    onChange={(e) => changeMission(row.id, "goals", e.target.value)}
-                  />
-                </label>
-
-                <label className="grid gap-1">
-                  <span className="text-sm text-slate-600">Activities</span>
-                  <textarea
-                    rows={3}
-                    className="border rounded-md p-2"
-                    value={row.activities || ""}
-                    onChange={(e) => changeMission(row.id, "activities", e.target.value)}
-                  />
-                </label>
-
-                <label className="grid gap-1">
-                  <span className="text-sm text-slate-600">Key deliverables</span>
-                  <textarea
-                    rows={3}
-                    className="border rounded-md p-2"
-                    value={row.key_deliverables || ""}
-                    onChange={(e) => changeMission(row.id, "key_deliverables", e.target.value)}
-                  />
-                </label>
-
-                <div className="flex justify-end">
-                  <RowActions onSave={() => saveMission(row)} onDelete={() => deleteMission(row)} />
-                </div>
-              </div>
-            ))}
+          <Section title="Missions" action={startAddMission}>
+            {draftMissionList.map((d) => renderMissionEditor(d))}
+            {missions.length === 0 && editingMissionExisting.length === 0 && draftMissionList.length === 0 && (
+              <div className="text-sm text-slate-500">No missions yet.</div>
+            )}
+            {/* Entrées existantes */}
+            {missions.map((row) => {
+              const editing = draftMissions[row.id];
+              return editing ? renderMissionEditor(editing) : renderMissionView(row);
+            })}
           </Section>
 
           {/* TRAININGS */}
-          <Section title="Trainings" action={addTraining}>
-            {trainings.length === 0 && <div className="text-sm text-slate-500">No trainings yet.</div>}
-            {trainings.map((row) => (
-              <div key={row.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="grid gap-1">
-                    <span className="text-sm text-slate-600">Training's name</span>
-                    <input
-                      type="text"
-                      className="border rounded-md p-2"
-                      value={row.name || ""}
-                      onChange={(e) => changeTraining(row.id, "name", e.target.value)}
-                      placeholder="Ex: Advanced React"
-                    />
-                  </label>
-                  <label className="grid gap-1">
-                    <span className="text-sm text-slate-600">Date</span>
-                    <input
-                      type="date"
-                      className="border rounded-md p-2"
-                      value={row.date || ""}
-                      onChange={(e) => changeTraining(row.id, "date", e.target.value)}
-                    />
-                  </label>
-                </div>
-                <div className="flex justify-end">
-                  <RowActions onSave={() => saveTraining(row)} onDelete={() => deleteTraining(row)} />
-                </div>
-              </div>
-            ))}
+          <Section title="Trainings" action={startAddTraining}>
+            {draftTrainingList.map((d) => renderTrainingEditor(d))}
+            {trainings.length === 0 && editingTrainingExisting.length === 0 && draftTrainingList.length === 0 && (
+              <div className="text-sm text-slate-500">No trainings yet.</div>
+            )}
+            {trainings.map((row) => {
+              const editing = draftTrainings[row.id];
+              return editing ? renderTrainingEditor(editing) : renderTrainingView(row);
+            })}
           </Section>
 
-          {/* INTERNAL CONTRIBUTIONS */}
-          <Section title="Internal contribution" action={addInternal}>
-            {internals.length === 0 && <div className="text-sm text-slate-500">No internal contributions yet.</div>}
-            {internals.map((row) => (
-              <div key={row.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="grid gap-1">
-                    <span className="text-sm text-slate-600">Contribution's name</span>
-                    <input
-                      type="text"
-                      className="border rounded-md p-2"
-                      value={row.name || ""}
-                      onChange={(e) => changeInternal(row.id, "name", e.target.value)}
-                      placeholder="Ex: Hiring sprint, OSS contribution..."
-                    />
-                  </label>
-                  <label className="grid gap-1">
-                    <span className="text-sm text-slate-600">Date</span>
-                    <input
-                      type="date"
-                      className="border rounded-md p-2"
-                      value={row.date || ""}
-                      onChange={(e) => changeInternal(row.id, "date", e.target.value)}
-                    />
-                  </label>
-                </div>
-                <div className="flex justify-end">
-                  <RowActions onSave={() => saveInternal(row)} onDelete={() => deleteInternal(row)} />
-                </div>
-              </div>
-            ))}
+          {/* TEALS CONTRIBUTIONS */}
+          <Section title="Teals contributions" action={startAddInternal}>
+            {draftInternalList.map((d) => renderInternalEditor(d))}
+            {internals.length === 0 && editingInternalExisting.length === 0 && draftInternalList.length === 0 && (
+              <div className="text-sm text-slate-500">No contributions yet.</div>
+            )}
+            {internals.map((row) => {
+              const editing = draftInternals[row.id];
+              return editing ? renderInternalEditor(editing) : renderInternalView(row);
+            })}
           </Section>
         </>
       )}
     </section>
   );
 }
+
 
 
 
