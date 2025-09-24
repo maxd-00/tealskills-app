@@ -263,31 +263,30 @@ useEffect(() => {
               )}
             </div>
 
-            {/* Droite : menu profil (robuste + fallback) */}
+{/* Droite : menu profil (silhouette teal) */}
 <div className="relative shrink-0" ref={menuRef}>
   <button
     type="button"
-    onClick={() => setMenuOpen((v) => !v)}
-    className="inline-flex items-center justify-center h-10 w-10 rounded-full border border-slate-300 bg-white text-[#057e7f] hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#057e7f]"
+    onClick={() => setMenuOpen(v => !v)}
     aria-haspopup="menu"
     aria-expanded={menuOpen}
     aria-label="Open profile menu"
+    className="flex items-center justify-center h-10 w-10 rounded-full border border-slate-300 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#057e7f]"
   >
-    {/* Icône profil (filled, bien contrastée) */}
+    {/* Silhouette de personne (outline teal, compatible iOS) */}
     <svg
-      xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
+      className="h-5 w-5 shrink-0"
+      fill="none"
+      stroke="#057e7f"
+      strokeWidth="2"
       aria-hidden="true"
-      className="h-5 w-5"
     >
-      <path
-        fill="currentColor"
-        d="M12 2a5 5 0 100 10 5 5 0 000-10Zm0 12c-4.418 0-8 2.239-8 5v.5A2.5 2.5 0 006.5 22h11a2.5 2.5 0 002.5-2.5V19c0-2.761-3.582-5-8-5Z"
-      />
+      {/* tête */}
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+      {/* épaules */}
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 20.25a8.25 8.25 0 0115 0" />
     </svg>
-
-    {/* Fallback initiale si jamais le SVG ne s'affichait pas (rare) */}
-    <span className="sr-only">{initials}</span>
   </button>
 
   {menuOpen && (
@@ -297,32 +296,33 @@ useEffect(() => {
     >
       <button
         role="menuitem"
+        type="button"
         onClick={() => { setMenuOpen(false); navigate("/profile"); }}
         className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
-        type="button"
       >
         Profile
       </button>
       <button
         role="menuitem"
+        type="button"
         onClick={() => { setMenuOpen(false); setExportOpen(true); }}
         className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
-        type="button"
       >
         Export
       </button>
       <div className="h-px bg-slate-200" />
       <button
         role="menuitem"
+        type="button"
         onClick={logout}
         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-        type="button"
       >
         Log out
       </button>
     </div>
   )}
 </div>
+
 
           </div>
         </div>
