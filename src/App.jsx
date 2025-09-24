@@ -137,7 +137,7 @@ function Shell({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { session } = useAuth();
-
+const initials = (session?.user?.email || "U").slice(0, 1).toUpperCase();
   const isLogin = location.pathname === "/login";
   const isOKR = location.pathname.startsWith("/okr");
 
@@ -263,27 +263,31 @@ useEffect(() => {
               )}
             </div>
 
-            {/* Droite : menu profil */}
-<div className="relative" ref={menuRef}>
+            {/* Droite : menu profil (robuste + fallback) */}
+<div className="relative shrink-0" ref={menuRef}>
   <button
+    type="button"
     onClick={() => setMenuOpen((v) => !v)}
-    className={`flex items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 !text-[#057e7f] ${isAdmin ? "h-8 w-8" : "h-10 w-10"}`}
+    className="inline-flex items-center justify-center h-10 w-10 rounded-full border border-slate-300 bg-white text-[#057e7f] hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#057e7f]"
     aria-haspopup="menu"
     aria-expanded={menuOpen}
     aria-label="Open profile menu"
   >
-    {/* Icône utilisateur */}
+    {/* Icône profil (filled, bien contrastée) */}
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      className={isAdmin ? "w-5 h-5" : "w-6 h-6"}
+      aria-hidden="true"
+      className="h-5 w-5"
     >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 20.25a8.25 8.25 0 0115 0" />
+      <path
+        fill="currentColor"
+        d="M12 2a5 5 0 100 10 5 5 0 000-10Zm0 12c-4.418 0-8 2.239-8 5v.5A2.5 2.5 0 006.5 22h11a2.5 2.5 0 002.5-2.5V19c0-2.761-3.582-5-8-5Z"
+      />
     </svg>
+
+    {/* Fallback initiale si jamais le SVG ne s'affichait pas (rare) */}
+    <span className="sr-only">{initials}</span>
   </button>
 
   {menuOpen && (
@@ -295,6 +299,7 @@ useEffect(() => {
         role="menuitem"
         onClick={() => { setMenuOpen(false); navigate("/profile"); }}
         className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+        type="button"
       >
         Profile
       </button>
@@ -302,6 +307,7 @@ useEffect(() => {
         role="menuitem"
         onClick={() => { setMenuOpen(false); setExportOpen(true); }}
         className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+        type="button"
       >
         Export
       </button>
@@ -310,6 +316,7 @@ useEffect(() => {
         role="menuitem"
         onClick={logout}
         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+        type="button"
       >
         Log out
       </button>
