@@ -3835,10 +3835,10 @@ function ProfilePage() {
   const [trainings, setTrainings] = useState([]);
   const [internals, setInternals] = useState([]); // Teals contributions
 
-  // Un SEUL éditeur par section (corrige le focus qui saute)
-  const [missionDraft, setMissionDraft] = useState(null);   // {__isNew, id?, mission, client_name, period_start, period_end, description, goals, activities, key_deliverables}
-  const [trainingDraft, setTrainingDraft] = useState(null); // {__isNew, id?, name, date}
-  const [internalDraft, setInternalDraft] = useState(null); // {__isNew, id?, name, date}
+  // Un SEUL éditeur par section (focus stable)
+  const [missionDraft, setMissionDraft] = useState(null);
+  const [trainingDraft, setTrainingDraft] = useState(null);
+  const [internalDraft, setInternalDraft] = useState(null);
 
   // ------- Load initial -------
   useEffect(() => {
@@ -3860,50 +3860,50 @@ function ProfilePage() {
     })();
   }, [userId]);
 
-  // ------- Helpers UI -------
+  // ------- UI helpers (mobile-first) -------
   const Section = ({ title, onAdd, children }) => (
-    <div className="bg-white rounded-2xl shadow p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xl font-semibold text-[#057e7f]">{title}</h2>
-        <button onClick={onAdd} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm" type="button">
+    <div className="bg-white rounded-2xl shadow-sm sm:shadow p-3 sm:p-4">
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <h2 className="text-lg sm:text-xl font-semibold text-[#057e7f]">{title}</h2>
+        <button
+          onClick={onAdd}
+          type="button"
+          className="px-3 py-2 sm:py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto"
+        >
           + Add
         </button>
       </div>
-      <div className="grid gap-4">{children}</div>
+      <div className="grid gap-3 sm:gap-4">{children}</div>
     </div>
   );
 
-  // Icônes style Admin (mêmes couleurs/format : ✎ / ✕)
+  // Icônes style Admin (✎ / ✕), cibles tactiles 44px
   const AdminIconButton = ({ type = "edit", title, onClick }) => {
-    const base = "bg-white rounded-full hover:bg-slate-50 px-2";
-    const color = type === "edit" ? "text-blue-600" : "text-red-600";
+    const base = "inline-flex items-center justify-center rounded-full bg-white border text-sm transition";
+    const size = "h-10 w-10 sm:h-8 sm:w-8"; // plus grand sur mobile
+    const border = type === "edit" ? "border-blue-200 text-blue-600 hover:bg-blue-50" : "border-red-200 text-red-600 hover:bg-red-50";
     return (
-      <button type="button" title={title} onClick={onClick} className={`${base} ${color}`}>
+      <button type="button" title={title} onClick={onClick} className={`${base} ${size} ${border}`}>
         {type === "edit" ? "✎" : "✕"}
       </button>
     );
   };
 
+  // Inputs lisibles sur iOS (évite le zoom auto < 16px)
+  const inputBase = "w-full border rounded-md p-3 sm:p-2 text-[16px] sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#057e7f] min-w-0";
+  const Input = (props) => <input {...props} className={`${inputBase} ${props.className || ""}`} />;
+  const Textarea = (props) => <textarea {...props} className={`${inputBase} ${props.className || ""}`} />;
+
   const FieldDisplay = ({ label, value }) => (
-    <div>
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="text-[15px] whitespace-pre-wrap">{value || <span className="text-slate-400">—</span>}</div>
+    <div className="min-w-0">
+      <div className="text-[11px] sm:text-xs uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="text-sm sm:text-[15px] whitespace-pre-wrap break-words">{value || <span className="text-slate-400">—</span>}</div>
     </div>
   );
 
   // ===================== MISSIONS =====================
   const startAddMission = () =>
-    setMissionDraft({
-      __isNew: true,
-      mission: "",
-      client_name: "",
-      period_start: "",
-      period_end: "",
-      description: "",
-      goals: "",
-      activities: "",
-      key_deliverables: "",
-    });
+    setMissionDraft({ __isNew: true, mission: "", client_name: "", period_start: "", period_end: "", description: "", goals: "", activities: "", key_deliverables: "" });
 
   const startEditMission = (row) =>
     setMissionDraft({
@@ -3919,8 +3919,7 @@ function ProfilePage() {
       key_deliverables: row.key_deliverables || "",
     });
 
-  const changeMission = (field, value) =>
-    setMissionDraft((d) => ({ ...d, [field]: value }));
+  const changeMission = (field, value) => setMissionDraft((d) => ({ ...d, [field]: value }));
 
   const saveMission = async () => {
     if (!userId || !missionDraft) return;
@@ -3940,13 +3939,7 @@ function ProfilePage() {
       if (error) return alert("Save failed: " + error.message);
       setMissions((arr) => [data, ...arr]);
     } else {
-      const { data, error } = await supabase
-        .from("missions")
-        .update(payload)
-        .eq("id", missionDraft.id)
-        .eq("user_id", userId)
-        .select("*")
-        .single();
+      const { data, error } = await supabase.from("missions").update(payload).eq("id", missionDraft.id).eq("user_id", userId).select("*").single();
       if (error) return alert("Update failed: " + error.message);
       setMissions((arr) => arr.map((r) => (r.id === missionDraft.id ? data : r)));
     }
@@ -3962,103 +3955,54 @@ function ProfilePage() {
   };
 
   const MissionEditor = () => (
-    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Mission</span>
-          <input
-            type="text"
-            className="border rounded-md p-2"
-            value={missionDraft.mission}
-            onChange={(e) => changeMission("mission", e.target.value)}
-            placeholder="Ex: Data platform migration"
-          />
+          <Input type="text" value={missionDraft.mission} onChange={(e) => changeMission("mission", e.target.value)} placeholder="Ex: Data platform migration" />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Client's name</span>
-          <input
-            type="text"
-            className="border rounded-md p-2"
-            value={missionDraft.client_name}
-            onChange={(e) => changeMission("client_name", e.target.value)}
-            placeholder="Ex: Acme Corp"
-          />
+          <Input type="text" value={missionDraft.client_name} onChange={(e) => changeMission("client_name", e.target.value)} placeholder="Ex: Acme Corp" />
         </label>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Period — Start</span>
-          <input
-            type="date"
-            className="border rounded-md p-2"
-            value={missionDraft.period_start || ""}
-            onChange={(e) => changeMission("period_start", e.target.value)}
-          />
+          <Input type="date" value={missionDraft.period_start || ""} onChange={(e) => changeMission("period_start", e.target.value)} />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Period — End</span>
-          <input
-            type="date"
-            className="border rounded-md p-2"
-            value={missionDraft.period_end || ""}
-            onChange={(e) => changeMission("period_end", e.target.value)}
-          />
+          <Input type="date" value={missionDraft.period_end || ""} onChange={(e) => changeMission("period_end", e.target.value)} />
         </label>
       </div>
 
       <label className="grid gap-1">
         <span className="text-sm text-slate-600">Description</span>
-        <textarea
-          rows={3}
-          className="border rounded-md p-2"
-          value={missionDraft.description}
-          onChange={(e) => changeMission("description", e.target.value)}
-        />
+        <Textarea rows={4} value={missionDraft.description} onChange={(e) => changeMission("description", e.target.value)} />
       </label>
 
       <label className="grid gap-1">
         <span className="text-sm text-slate-600">Goals</span>
-        <textarea
-          rows={3}
-          className="border rounded-md p-2"
-          value={missionDraft.goals}
-          onChange={(e) => changeMission("goals", e.target.value)}
-        />
+        <Textarea rows={4} value={missionDraft.goals} onChange={(e) => changeMission("goals", e.target.value)} />
       </label>
 
       <label className="grid gap-1">
         <span className="text-sm text-slate-600">Activities</span>
-        <textarea
-          rows={3}
-          className="border rounded-md p-2"
-          value={missionDraft.activities}
-          onChange={(e) => changeMission("activities", e.target.value)}
-        />
+        <Textarea rows={4} value={missionDraft.activities} onChange={(e) => changeMission("activities", e.target.value)} />
       </label>
 
       <label className="grid gap-1">
         <span className="text-sm text-slate-600">Key deliverables</span>
-        <textarea
-          rows={3}
-          className="border rounded-md p-2"
-          value={missionDraft.key_deliverables}
-          onChange={(e) => changeMission("key_deliverables", e.target.value)}
-        />
+        <Textarea rows={4} value={missionDraft.key_deliverables} onChange={(e) => changeMission("key_deliverables", e.target.value)} />
       </label>
 
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => setMissionDraft(null)}
-          className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-sm"
-        >
+      <div className="flex flex-col sm:flex-row justify-end gap-2">
+        <button type="button" onClick={() => setMissionDraft(null)} className="px-4 py-3 sm:py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-sm w-full sm:w-auto">
           Cancel
         </button>
-        <button
-          onClick={saveMission}
-          className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm"
-        >
+        <button onClick={saveMission} className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto">
           Save
         </button>
       </div>
@@ -4066,15 +4010,15 @@ function ProfilePage() {
   );
 
   const MissionCard = ({ row }) => (
-    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
-      <div className="flex items-start justify-between">
-        <div className="font-medium">{row.mission || "Untitled mission"}</div>
+    <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="font-medium break-words">{row.mission || "Untitled mission"}</div>
         <div className="flex items-center gap-2">
           <AdminIconButton title="Edit" onClick={() => startEditMission(row)} />
           <AdminIconButton type="delete" title="Delete" onClick={() => deleteMission(row)} />
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <FieldDisplay label="Client's name" value={row.client_name} />
         <FieldDisplay label="Period" value={(row.period_start || row.period_end) ? `${row.period_start || "?"} → ${row.period_end || "?"}` : ""} />
       </div>
@@ -4087,12 +4031,8 @@ function ProfilePage() {
 
   // ===================== TRAININGS =====================
   const startAddTraining = () => setTrainingDraft({ __isNew: true, name: "", date: "" });
-
-  const startEditTraining = (row) =>
-    setTrainingDraft({ __isNew: false, id: row.id, name: row.name || "", date: row.date || "" });
-
-  const changeTraining = (field, value) =>
-    setTrainingDraft((d) => ({ ...d, [field]: value }));
+  const startEditTraining = (row) => setTrainingDraft({ __isNew: false, id: row.id, name: row.name || "", date: row.date || "" });
+  const changeTraining = (field, value) => setTrainingDraft((d) => ({ ...d, [field]: value }));
 
   const saveTraining = async () => {
     if (!userId || !trainingDraft) return;
@@ -4102,13 +4042,7 @@ function ProfilePage() {
       if (error) return alert("Save failed: " + error.message);
       setTrainings((arr) => [data, ...arr]);
     } else {
-      const { data, error } = await supabase
-        .from("trainings")
-        .update(payload)
-        .eq("id", trainingDraft.id)
-        .eq("user_id", userId)
-        .select("*")
-        .single();
+      const { data, error } = await supabase.from("trainings").update(payload).eq("id", trainingDraft.id).eq("user_id", userId).select("*").single();
       if (error) return alert("Update failed: " + error.message);
       setTrainings((arr) => arr.map((r) => (r.id === trainingDraft.id ? data : r)));
     }
@@ -4124,40 +4058,22 @@ function ProfilePage() {
   };
 
   const TrainingEditor = () => (
-    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Training's name</span>
-          <input
-            type="text"
-            className="border rounded-md p-2"
-            value={trainingDraft.name}
-            onChange={(e) => changeTraining("name", e.target.value)}
-            placeholder="Ex: Advanced React"
-          />
+          <Input type="text" value={trainingDraft.name} onChange={(e) => changeTraining("name", e.target.value)} placeholder="Ex: Advanced React" />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Date</span>
-          <input
-            type="date"
-            className="border rounded-md p-2"
-            value={trainingDraft.date || ""}
-            onChange={(e) => changeTraining("date", e.target.value)}
-          />
+          <Input type="date" value={trainingDraft.date || ""} onChange={(e) => changeTraining("date", e.target.value)} />
         </label>
       </div>
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => setTrainingDraft(null)}
-          className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-sm"
-        >
+      <div className="flex flex-col sm:flex-row justify-end gap-2">
+        <button type="button" onClick={() => setTrainingDraft(null)} className="px-4 py-3 sm:py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-sm w-full sm:w-auto">
           Cancel
         </button>
-        <button
-          onClick={saveTraining}
-          className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm"
-        >
+        <button onClick={saveTraining} className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto">
           Save
         </button>
       </div>
@@ -4165,9 +4081,9 @@ function ProfilePage() {
   );
 
   const TrainingCard = ({ row }) => (
-    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
-      <div className="flex items-start justify-between">
-        <div className="font-medium">{row.name || "Untitled training"}</div>
+    <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="font-medium break-words">{row.name || "Untitled training"}</div>
         <div className="flex items-center gap-2">
           <AdminIconButton title="Edit" onClick={() => startEditTraining(row)} />
           <AdminIconButton type="delete" title="Delete" onClick={() => deleteTraining(row)} />
@@ -4179,12 +4095,8 @@ function ProfilePage() {
 
   // ===================== TEALS CONTRIBUTIONS =====================
   const startAddInternal = () => setInternalDraft({ __isNew: true, name: "", date: "" });
-
-  const startEditInternal = (row) =>
-    setInternalDraft({ __isNew: false, id: row.id, name: row.name || "", date: row.date || "" });
-
-  const changeInternal = (field, value) =>
-    setInternalDraft((d) => ({ ...d, [field]: value }));
+  const startEditInternal = (row) => setInternalDraft({ __isNew: false, id: row.id, name: row.name || "", date: row.date || "" });
+  const changeInternal = (field, value) => setInternalDraft((d) => ({ ...d, [field]: value }));
 
   const saveInternal = async () => {
     if (!userId || !internalDraft) return;
@@ -4194,13 +4106,7 @@ function ProfilePage() {
       if (error) return alert("Save failed: " + error.message);
       setInternals((arr) => [data, ...arr]);
     } else {
-      const { data, error } = await supabase
-        .from("internal_contributions")
-        .update(payload)
-        .eq("id", internalDraft.id)
-        .eq("user_id", userId)
-        .select("*")
-        .single();
+      const { data, error } = await supabase.from("internal_contributions").update(payload).eq("id", internalDraft.id).eq("user_id", userId).select("*").single();
       if (error) return alert("Update failed: " + error.message);
       setInternals((arr) => arr.map((r) => (r.id === internalDraft.id ? data : r)));
     }
@@ -4216,40 +4122,22 @@ function ProfilePage() {
   };
 
   const InternalEditor = () => (
-    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Contribution's name</span>
-          <input
-            type="text"
-            className="border rounded-md p-2"
-            value={internalDraft.name}
-            onChange={(e) => changeInternal("name", e.target.value)}
-            placeholder="Ex: Hiring sprint, OSS contribution..."
-          />
+          <Input type="text" value={internalDraft.name} onChange={(e) => changeInternal("name", e.target.value)} placeholder="Ex: Hiring sprint, OSS contribution..." />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Date</span>
-          <input
-            type="date"
-            className="border rounded-md p-2"
-            value={internalDraft.date || ""}
-            onChange={(e) => changeInternal("date", e.target.value)}
-          />
+          <Input type="date" value={internalDraft.date || ""} onChange={(e) => changeInternal("date", e.target.value)} />
         </label>
       </div>
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => setInternalDraft(null)}
-          className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-sm"
-        >
+      <div className="flex flex-col sm:flex-row justify-end gap-2">
+        <button type="button" onClick={() => setInternalDraft(null)} className="px-4 py-3 sm:py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-sm w-full sm:w-auto">
           Cancel
         </button>
-        <button
-          onClick={saveInternal}
-          className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm"
-        >
+        <button onClick={saveInternal} className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto">
           Save
         </button>
       </div>
@@ -4257,9 +4145,9 @@ function ProfilePage() {
   );
 
   const InternalCard = ({ row }) => (
-    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
-      <div className="flex items-start justify-between">
-        <div className="font-medium">{row.name || "Untitled contribution"}</div>
+    <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="font-medium break-words">{row.name || "Untitled contribution"}</div>
         <div className="flex items-center gap-2">
           <AdminIconButton title="Edit" onClick={() => startEditInternal(row)} />
           <AdminIconButton type="delete" title="Delete" onClick={() => deleteInternal(row)} />
@@ -4269,13 +4157,13 @@ function ProfilePage() {
     </div>
   );
 
-  // ------- Render -------
+  // ------- Render (conteneur mobile-friendly) -------
   return (
-    <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#057e7f]">Profile</h1>
-        <div className="text-slate-600 text-sm">
-          Signed in as <span className="font-medium">{email}</span>
+    <section className="space-y-4 sm:space-y-6 px-3 sm:px-6 max-w-3xl mx-auto">
+      <div className="pt-[env(safe-area-inset-top)]">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#057e7f]">Profile</h1>
+        <div className="text-slate-600 text-sm mt-1">
+          Signed in as <span className="font-medium break-words">{email}</span>
         </div>
       </div>
 
@@ -4286,40 +4174,29 @@ function ProfilePage() {
           {/* Missions */}
           <Section title="Missions" onAdd={startAddMission}>
             {missionDraft && <MissionEditor />}
-            {missions.length === 0 && !missionDraft && (
-              <div className="text-sm text-slate-500">No missions yet.</div>
-            )}
-            {missions.map((row) => (
-              <MissionCard key={row.id} row={row} />
-            ))}
+            {missions.length === 0 && !missionDraft && <div className="text-sm text-slate-500">No missions yet.</div>}
+            {missions.map((row) => <MissionCard key={row.id} row={row} />)}
           </Section>
 
           {/* Trainings */}
           <Section title="Trainings" onAdd={startAddTraining}>
             {trainingDraft && <TrainingEditor />}
-            {trainings.length === 0 && !trainingDraft && (
-              <div className="text-sm text-slate-500">No trainings yet.</div>
-            )}
-            {trainings.map((row) => (
-              <TrainingCard key={row.id} row={row} />
-            ))}
+            {trainings.length === 0 && !trainingDraft && <div className="text-sm text-slate-500">No trainings yet.</div>}
+            {trainings.map((row) => <TrainingCard key={row.id} row={row} />)}
           </Section>
 
           {/* Teals contributions */}
           <Section title="Teals contributions" onAdd={startAddInternal}>
             {internalDraft && <InternalEditor />}
-            {internals.length === 0 && !internalDraft && (
-              <div className="text-sm text-slate-500">No contributions yet.</div>
-            )}
-            {internals.map((row) => (
-              <InternalCard key={row.id} row={row} />
-            ))}
+            {internals.length === 0 && !internalDraft && <div className="text-sm text-slate-500">No contributions yet.</div>}
+            {internals.map((row) => <InternalCard key={row.id} row={row} />)}
           </Section>
         </>
       )}
     </section>
   );
 }
+
 
 
 
