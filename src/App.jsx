@@ -4053,7 +4053,7 @@ const MissionEditor = () => {
           <EditableInput
             ref={rMission}
             defaultValue={missionDraft.mission || ""}
-            placeholder="Ex: Data platform migration"
+            placeholder="Add your Mission..."
           />
         </label>
         <label className="grid gap-1">
@@ -4061,7 +4061,7 @@ const MissionEditor = () => {
           <EditableInput
             ref={rClient}
             defaultValue={missionDraft.client_name || ""}
-            placeholder="Ex: Acme Corp"
+            placeholder="Add your Client..."
           />
         </label>
       </div>
@@ -4209,7 +4209,7 @@ const TrainingEditor = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Training's name</span>
-          <EditableInput ref={rName} defaultValue={trainingDraft.name || ""} placeholder="Ex: Advanced React" />
+          <EditableInput ref={rName} defaultValue={trainingDraft.name || ""} placeholder="Add your Training..." />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Date</span>
@@ -4302,7 +4302,7 @@ const InternalEditor = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Contribution's name</span>
-          <EditableInput ref={rName} defaultValue={internalDraft.name || ""} placeholder="Ex: Hiring sprint, OSS contribution..." />
+          <EditableInput ref={rName} defaultValue={internalDraft.name || ""} placeholder="Add your internal contribution..." />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Date</span>
