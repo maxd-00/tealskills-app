@@ -3905,6 +3905,46 @@ const Section = ({ title, onAdd, children }) => (
     </div>
   );
 
+  // ====== Inputs réutilisables (style OKR / Admin) ======
+const EditableInput = React.forwardRef(({ defaultValue = "", type = "text", className = "", ...props }, ref) => (
+  <input
+    ref={ref}
+    type={type}
+    defaultValue={defaultValue}
+    className={`w-full border border-slate-300 rounded-md p-2 text-[16px] sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#057e7f] ${className}`}
+    {...props}
+  />
+));
+
+const EditableTextarea = React.forwardRef(({ defaultValue = "", rows = 3, className = "", ...props }, ref) => {
+  const onInputAuto = (e) => {
+    e.target.style.height = "auto";
+    e.target.style.height = e.target.scrollHeight + "px";
+  };
+  return (
+    <textarea
+      ref={ref}
+      rows={rows}
+      defaultValue={defaultValue}
+      onInput={onInputAuto}
+      className={`w-full border border-slate-300 rounded-md p-2 text-[16px] sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#057e7f] resize-none ${className}`}
+      {...props}
+    />
+  );
+});
+
+// DateInput (même look que Admin > Employees - anniversaires)
+const DateInput = React.forwardRef(({ defaultValue = "", className = "", ...props }, ref) => (
+  <input
+    ref={ref}
+    type="date"
+    defaultValue={defaultValue || ""}
+    className={`w-full border border-slate-300 rounded-md p-2 text-[16px] sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#057e7f] ${className}`}
+    {...props}
+  />
+));
+
+
   // ===================== MISSIONS =====================
   const startAddMission = () =>
     setMissionDraft({ __isNew: true, mission: "", client_name: "", period_start: "", period_end: "", description: "", goals: "", activities: "", key_deliverables: "" });
@@ -3958,60 +3998,104 @@ const Section = ({ title, onAdd, children }) => (
     setMissions((arr) => arr.filter((r) => r.id !== row.id));
   };
 
-  const MissionEditor = () => (
-    <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
+const MissionEditor = () => {
+  const rMission = useRef(null);
+  const rClient = useRef(null);
+  const rStart = useRef(null);
+  const rEnd = useRef(null);
+  const rDesc = useRef(null);
+  const rGoals = useRef(null);
+  const rActs = useRef(null);
+  const rDeliv = useRef(null);
+
+  const handleSave = async () => {
+    if (!userId) return;
+    const payload = {
+      mission: rMission.current?.value?.trim() || null,
+      client_name: rClient.current?.value?.trim() || null,
+      period_start: rStart.current?.value || null,
+      period_end: rEnd.current?.value || null,
+      description: rDesc.current?.value?.trim() || null,
+      goals: rGoals.current?.value?.trim() || null,
+      activities: rActs.current?.value?.trim() || null,
+      key_deliverables: rDeliv.current?.value?.trim() || null,
+      user_id: userId,
+    };
+
+    if (missionDraft.__isNew) {
+      const { data, error } = await supabase.from("missions").insert([payload]).select("*").single();
+      if (error) return alert("Save failed: " + error.message);
+      setMissions((arr) => [data, ...arr]);
+    } else {
+      const { data, error } = await supabase
+        .from("missions")
+        .update(payload)
+        .eq("id", missionDraft.id)
+        .eq("user_id", userId)
+        .select("*")
+        .single();
+      if (error) return alert("Update failed: " + error.message);
+      setMissions((arr) => arr.map((r) => (r.id === missionDraft.id ? data : r)));
+    }
+    setMissionDraft(null);
+  };
+
+  return (
+    <div className="border border-slate-200 rounded-2xl p-3 sm:p-4 grid gap-3 sm:gap-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Mission</span>
-          <Input type="text" value={missionDraft.mission} onChange={(e) => changeMission("mission", e.target.value)} placeholder="Ex: Data platform migration" />
+          <EditableInput ref={rMission} defaultValue={missionDraft.mission || ""} placeholder="Ex: Data platform migration" />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Client's name</span>
-          <Input type="text" value={missionDraft.client_name} onChange={(e) => changeMission("client_name", e.target.value)} placeholder="Ex: Acme Corp" />
+          <EditableInput ref={rClient} defaultValue={missionDraft.client_name || ""} placeholder="Ex: Acme Corp" />
         </label>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Period — Start</span>
-          <Input type="date" value={missionDraft.period_start || ""} onChange={(e) => changeMission("period_start", e.target.value)} />
+          <DateInput ref={rStart} defaultValue={missionDraft.period_start || ""} />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Period — End</span>
-          <Input type="date" value={missionDraft.period_end || ""} onChange={(e) => changeMission("period_end", e.target.value)} />
+          <DateInput ref={rEnd} defaultValue={missionDraft.period_end || ""} />
         </label>
       </div>
 
       <label className="grid gap-1">
         <span className="text-sm text-slate-600">Description</span>
-        <Textarea rows={4} value={missionDraft.description} onChange={(e) => changeMission("description", e.target.value)} />
+        <EditableTextarea ref={rDesc} defaultValue={missionDraft.description || ""} rows={4} />
       </label>
 
       <label className="grid gap-1">
         <span className="text-sm text-slate-600">Goals</span>
-        <Textarea rows={4} value={missionDraft.goals} onChange={(e) => changeMission("goals", e.target.value)} />
+        <EditableTextarea ref={rGoals} defaultValue={missionDraft.goals || ""} rows={4} />
       </label>
 
       <label className="grid gap-1">
         <span className="text-sm text-slate-600">Activities</span>
-        <Textarea rows={4} value={missionDraft.activities} onChange={(e) => changeMission("activities", e.target.value)} />
+        <EditableTextarea ref={rActs} defaultValue={missionDraft.activities || ""} rows={4} />
       </label>
 
       <label className="grid gap-1">
         <span className="text-sm text-slate-600">Key deliverables</span>
-        <Textarea rows={4} value={missionDraft.key_deliverables} onChange={(e) => changeMission("key_deliverables", e.target.value)} />
+        <EditableTextarea ref={rDeliv} defaultValue={missionDraft.key_deliverables || ""} rows={4} />
       </label>
 
       <div className="flex flex-col sm:flex-row justify-end gap-2">
         <button type="button" onClick={() => setMissionDraft(null)} className="px-4 py-3 sm:py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-sm w-full sm:w-auto">
           Cancel
         </button>
-        <button onClick={saveMission} className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto">
+        <button onClick={handleSave} className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto">
           Save
         </button>
       </div>
     </div>
   );
+};
+
 
   const MissionCard = ({ row }) => (
     <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
@@ -4061,28 +4145,57 @@ const Section = ({ title, onAdd, children }) => (
     setTrainings((arr) => arr.filter((r) => r.id !== row.id));
   };
 
-  const TrainingEditor = () => (
-    <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
+const TrainingEditor = () => {
+  const rName = useRef(null);
+  const rDate = useRef(null);
+
+  const handleSave = async () => {
+    if (!userId) return;
+    const payload = { name: rName.current?.value?.trim() || null, date: rDate.current?.value || null, user_id: userId };
+
+    if (trainingDraft.__isNew) {
+      const { data, error } = await supabase.from("trainings").insert([payload]).select("*").single();
+      if (error) return alert("Save failed: " + error.message);
+      setTrainings((arr) => [data, ...arr]);
+    } else {
+      const { data, error } = await supabase
+        .from("trainings")
+        .update(payload)
+        .eq("id", trainingDraft.id)
+        .eq("user_id", userId)
+        .select("*")
+        .single();
+      if (error) return alert("Update failed: " + error.message);
+      setTrainings((arr) => arr.map((r) => (r.id === trainingDraft.id ? data : r)));
+    }
+    setTrainingDraft(null);
+  };
+
+  return (
+    <div className="border border-slate-200 rounded-2xl p-3 sm:p-4 grid gap-3 sm:gap-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Training's name</span>
-          <Input type="text" value={trainingDraft.name} onChange={(e) => changeTraining("name", e.target.value)} placeholder="Ex: Advanced React" />
+          <EditableInput ref={rName} defaultValue={trainingDraft.name || ""} placeholder="Ex: Advanced React" />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Date</span>
-          <Input type="date" value={trainingDraft.date || ""} onChange={(e) => changeTraining("date", e.target.value)} />
+          <DateInput ref={rDate} defaultValue={trainingDraft.date || ""} />
         </label>
       </div>
+
       <div className="flex flex-col sm:flex-row justify-end gap-2">
         <button type="button" onClick={() => setTrainingDraft(null)} className="px-4 py-3 sm:py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-sm w-full sm:w-auto">
           Cancel
         </button>
-        <button onClick={saveTraining} className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto">
+        <button onClick={handleSave} className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto">
           Save
         </button>
       </div>
     </div>
   );
+};
+
 
   const TrainingCard = ({ row }) => (
     <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
@@ -4125,28 +4238,57 @@ const Section = ({ title, onAdd, children }) => (
     setInternals((arr) => arr.filter((r) => r.id !== row.id));
   };
 
-  const InternalEditor = () => (
-    <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
+const InternalEditor = () => {
+  const rName = useRef(null);
+  const rDate = useRef(null);
+
+  const handleSave = async () => {
+    if (!userId) return;
+    const payload = { name: rName.current?.value?.trim() || null, date: rDate.current?.value || null, user_id: userId };
+
+    if (internalDraft.__isNew) {
+      const { data, error } = await supabase.from("internal_contributions").insert([payload]).select("*").single();
+      if (error) return alert("Save failed: " + error.message);
+      setInternals((arr) => [data, ...arr]);
+    } else {
+      const { data, error } = await supabase
+        .from("internal_contributions")
+        .update(payload)
+        .eq("id", internalDraft.id)
+        .eq("user_id", userId)
+        .select("*")
+        .single();
+      if (error) return alert("Update failed: " + error.message);
+      setInternals((arr) => arr.map((r) => (r.id === internalDraft.id ? data : r)));
+    }
+    setInternalDraft(null);
+  };
+
+  return (
+    <div className="border border-slate-200 rounded-2xl p-3 sm:p-4 grid gap-3 sm:gap-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Contribution's name</span>
-          <Input type="text" value={internalDraft.name} onChange={(e) => changeInternal("name", e.target.value)} placeholder="Ex: Hiring sprint, OSS contribution..." />
+          <EditableInput ref={rName} defaultValue={internalDraft.name || ""} placeholder="Ex: Hiring sprint, OSS contribution..." />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Date</span>
-          <Input type="date" value={internalDraft.date || ""} onChange={(e) => changeInternal("date", e.target.value)} />
+          <DateInput ref={rDate} defaultValue={internalDraft.date || ""} />
         </label>
       </div>
+
       <div className="flex flex-col sm:flex-row justify-end gap-2">
         <button type="button" onClick={() => setInternalDraft(null)} className="px-4 py-3 sm:py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-sm w-full sm:w-auto">
           Cancel
         </button>
-        <button onClick={saveInternal} className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto">
+        <button onClick={handleSave} className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto">
           Save
         </button>
       </div>
     </div>
   );
+};
+
 
   const InternalCard = ({ row }) => (
     <div className="border border-slate-200 rounded-xl p-3 sm:p-4 grid gap-3 sm:gap-4">
@@ -4165,12 +4307,13 @@ const Section = ({ title, onAdd, children }) => (
   return (
     <section className="mx-auto w-full max-w-screen-md md:max-w-screen-lg lg:max-w-[1100px] px-4 sm:px-6 md:px-8 space-y-6">
 
-      <div className="pt-[env(safe-area-inset-top)]">
-        <h1 className="text-xl sm:text-2xl font-bold text-[#057e7f]">Profile</h1>
-        <div className="text-slate-600 text-sm mt-1">
-          Signed in as <span className="font-medium break-words">{email}</span>
-        </div>
-      </div>
+<div className="pt-[env(safe-area-inset-top)]">
+  <h1 className="text-2xl font-bold text-[#057e7f]">Profile</h1>
+  <div className="text-slate-600 text-sm mt-1">
+    Signed in as <span className="font-medium break-words">{email}</span>
+  </div>
+</div>
+
 
       {loading ? (
         <div className="text-slate-500">Loading…</div>
@@ -4191,7 +4334,7 @@ const Section = ({ title, onAdd, children }) => (
           </Section>
 
           {/* Teals contributions */}
-          <Section title="Teals contributions" onAdd={startAddInternal}>
+          <Section title="Contributions" onAdd={startAddInternal}>
             {internalDraft && <InternalEditor />}
             {internals.length === 0 && !internalDraft && <div className="text-sm text-slate-500">No contributions yet.</div>}
             {internals.map((row) => <InternalCard key={row.id} row={row} />)}
