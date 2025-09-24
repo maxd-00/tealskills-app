@@ -3934,15 +3934,19 @@ const EditableTextarea = React.forwardRef(({ defaultValue = "", rows = 3, classN
 });
 
 // DateInput (même look que Admin > Employees - anniversaires)
-const DateInput = React.forwardRef(({ defaultValue = "", className = "", ...props }, ref) => (
+const DateInput = React.forwardRef(({ defaultValue = "", compact = false, className = "", ...props }, ref) => (
   <input
     ref={ref}
     type="date"
     defaultValue={defaultValue || ""}
-    className={`w-full border border-slate-300 rounded-md p-2 text-[16px] sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#057e7f] ${className}`}
+    // compact => plus petit: h-9, texte plus petit, padding réduit
+    className={`w-full border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#057e7f] ${
+      compact ? "h-9 px-2 text-sm" : "h-11 px-3 text-[16px] sm:text-sm"
+    } ${className}`}
     {...props}
   />
 ));
+
 
 
   // ===================== MISSIONS =====================
@@ -4045,22 +4049,42 @@ const MissionEditor = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Mission</span>
-          <EditableInput ref={rMission} defaultValue={missionDraft.mission || ""} placeholder="Ex: Data platform migration" />
+          <EditableInput
+            ref={rMission}
+            defaultValue={missionDraft.mission || ""}
+            placeholder="Ex: Data platform migration"
+          />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Client's name</span>
-          <EditableInput ref={rClient} defaultValue={missionDraft.client_name || ""} placeholder="Ex: Acme Corp" />
+          <EditableInput
+            ref={rClient}
+            defaultValue={missionDraft.client_name || ""}
+            placeholder="Ex: Acme Corp"
+          />
         </label>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Period — Start</span>
-          <DateInput ref={rStart} defaultValue={missionDraft.period_start || ""} />
+          {/* version compacte pour rentrer dans l'encadré */}
+          <DateInput
+            ref={rStart}
+            defaultValue={missionDraft.period_start || ""}
+            compact
+            className="h-9 px-2 text-sm"
+          />
         </label>
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Period — End</span>
-          <DateInput ref={rEnd} defaultValue={missionDraft.period_end || ""} />
+          {/* version compacte pour rentrer dans l'encadré */}
+          <DateInput
+            ref={rEnd}
+            defaultValue={missionDraft.period_end || ""}
+            compact
+            className="h-9 px-2 text-sm"
+          />
         </label>
       </div>
 
@@ -4085,16 +4109,24 @@ const MissionEditor = () => {
       </label>
 
       <div className="flex flex-col sm:flex-row justify-end gap-2">
-        <button type="button" onClick={() => setMissionDraft(null)} className="px-4 py-3 sm:py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-sm w-full sm:w-auto">
+        <button
+          type="button"
+          onClick={() => setMissionDraft(null)}
+          className="px-4 py-3 sm:py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-sm w-full sm:w-auto"
+        >
           Cancel
         </button>
-        <button onClick={handleSave} className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto">
+        <button
+          onClick={handleSave}
+          className="px-4 py-3 sm:py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm w-full sm:w-auto"
+        >
           Save
         </button>
       </div>
     </div>
   );
 };
+
 
 
   const MissionCard = ({ row }) => (
@@ -4305,8 +4337,7 @@ const InternalEditor = () => {
 
   // ------- Render (conteneur mobile-friendly) -------
   return (
-    <section className="mx-auto w-full max-w-screen-md md:max-w-screen-lg lg:max-w-[1100px] px-4 sm:px-6 md:px-8 space-y-6">
-
+<section className="mx-auto w-full max-w-[1100px] px-4 sm:px-6 md:px-8 space-y-6">
 <div className="pt-[env(safe-area-inset-top)]">
   <h1 className="text-2xl font-bold text-[#057e7f]">Profile</h1>
   <div className="text-slate-600 text-sm mt-1">
