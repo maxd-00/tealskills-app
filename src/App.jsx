@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useContext, createContext } from "react";
+import React, { useEffect, useMemo, useState, useContext, createContext, useRef} from "react";
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   PieChart,
@@ -168,6 +168,23 @@ function Shell({ children }) {
     navigate("/login", { replace: true });
   };
 
+  // Menu profil & modal Export
+const [menuOpen, setMenuOpen] = useState(false);
+const [exportOpen, setExportOpen] = useState(false);
+const [exportComment, setExportComment] = useState("");
+const menuRef = useRef(null);
+
+// Fermer le menu si clic à l'extérieur
+useEffect(() => {
+  function onDocClick(e) {
+    if (!menuRef.current) return;
+    if (!menuRef.current.contains(e.target)) setMenuOpen(false);
+  }
+  document.addEventListener("mousedown", onDocClick);
+  return () => document.removeEventListener("mousedown", onDocClick);
+}, []);
+
+
   // Style des liens NAV
   const navLinkClass = ({ isActive }) =>
     `no-underline !text-[#057e7f] rounded-md transition-colors font-medium
@@ -246,32 +263,60 @@ function Shell({ children }) {
               )}
             </div>
 
-            {/* Droite : icône logout */}
-            <div className="flex items-center">
-              <button
-                onClick={logout}
-                className={`rounded-md hover:bg-[#057e7f]/10 !text-[#057e7f] ${
-                  isAdmin ? "p-1.5 sm:p-2" : "p-2 sm:p-2.5"
-                }`}
-                aria-label="Logout"
-              >
-                {/* Icône porte */}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className={isAdmin ? "w-5 h-5" : "w-6 h-6"}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"
-                  />
-                </svg>
-              </button>
-            </div>
+            {/* Droite : menu profil */}
+<div className="relative" ref={menuRef}>
+  <button
+    onClick={() => setMenuOpen((v) => !v)}
+    className={`flex items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 !text-[#057e7f] ${isAdmin ? "h-8 w-8" : "h-10 w-10"}`}
+    aria-haspopup="menu"
+    aria-expanded={menuOpen}
+    aria-label="Open profile menu"
+  >
+    {/* Icône utilisateur */}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className={isAdmin ? "w-5 h-5" : "w-6 h-6"}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 20.25a8.25 8.25 0 0115 0" />
+    </svg>
+  </button>
+
+  {menuOpen && (
+    <div
+      role="menu"
+      className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden z-[10000]"
+    >
+      <button
+        role="menuitem"
+        onClick={() => { setMenuOpen(false); navigate("/profile"); }}
+        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+      >
+        Profile
+      </button>
+      <button
+        role="menuitem"
+        onClick={() => { setMenuOpen(false); setExportOpen(true); }}
+        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+      >
+        Export
+      </button>
+      <div className="h-px bg-slate-200" />
+      <button
+        role="menuitem"
+        onClick={logout}
+        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+      >
+        Log out
+      </button>
+    </div>
+  )}
+</div>
+
           </div>
         </div>
       )}
@@ -286,6 +331,55 @@ function Shell({ children }) {
 >
   {children}
 </main>
+{exportOpen && (
+  <div className="fixed inset-0 z-[10001]">
+    <div
+      className="absolute inset-0 bg-black/40"
+      onClick={() => setExportOpen(false)}
+      aria-hidden="true"
+    />
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="absolute inset-0 flex items-center justify-center p-4"
+    >
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-slate-200">
+        <div className="px-5 py-4 border-b">
+          <h3 className="text-lg font-semibold text-[#057e7f]">Export</h3>
+          <p className="text-sm text-slate-600">
+            Ajoute un commentaire général avant l’export.
+          </p>
+        </div>
+        <div className="px-5 py-4 grid gap-3">
+          <label className="grid gap-1">
+            <span className="text-sm text-slate-600">Commentaire général</span>
+            <textarea
+              rows={5}
+              className="w-full rounded-md border border-slate-300 p-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#057e7f]"
+              placeholder="Notes, contexte, hypothèses…"
+              value={exportComment}
+              onChange={(e) => setExportComment(e.target.value)}
+            />
+          </label>
+        </div>
+        <div className="px-5 py-4 border-t flex items-center justify-end gap-3">
+          <button
+            onClick={() => setExportOpen(false)}
+            className="px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { alert('Export pas encore implémenté'); setExportOpen(false); }}
+            className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90"
+          >
+            Export
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
     </div>
   );
@@ -3723,6 +3817,22 @@ const makeOuterRadialLabelAdvanced = (total, category) => (props) => {
 
 
 
+function ProfilePage() {
+  const { session } = useAuth();
+  const email = session?.user?.email || "";
+  return (
+    <section className="space-y-4">
+      <h1 className="text-2xl font-bold text-[#057e7f]">Profile</h1>
+      <div className="bg-white rounded-2xl shadow p-4">
+        <div className="text-sm text-slate-600">Email</div>
+        <div className="font-medium">{email}</div>
+        <div className="mt-4 text-slate-500 text-sm">
+          (Page à compléter : infos profil, changement de mot de passe, etc.)
+        </div>
+      </div>
+    </section>
+  );
+}
 
 
 /**
@@ -3745,6 +3855,7 @@ export default function App() {
               <Route path="/okr/:category" element={<ProtectedRoute><OKR /></ProtectedRoute>} />
               <Route path="/global" element={<ProtectedRoute><Global /></ProtectedRoute>} />
               <Route path="/role" element={<ProtectedRoute><RolePage /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
