@@ -3823,21 +3823,17 @@ function ProfilePage() {
   const email = session?.user?.email || "";
 
   const [loading, setLoading] = useState(true);
-
-  // Données affichées (lecture seule)
   const [missions, setMissions] = useState([]);
   const [trainings, setTrainings] = useState([]);
   const [internals, setInternals] = useState([]);
 
-  // Brouillons en cours d’édition (clé = id)
-  const [draftMissions, setDraftMissions] = useState({});
-  const [draftTrainings, setDraftTrainings] = useState({});
-  const [draftInternals, setDraftInternals] = useState({});
+  // Éditeurs uniques (un brouillon par section)
+  const [missionDraft, setMissionDraft] = useState(null);   // { __isNew, id?, fields... } | null
+  const [trainingDraft, setTrainingDraft] = useState(null);
+  const [internalDraft, setInternalDraft] = useState(null);
 
-  const tmpId = (pfx) =>
-    `${pfx}_${(typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`;
-
-  // Chargement initial
+  // --------------------------------------------------
+  // Load
   useEffect(() => {
     if (!userId) return;
     (async () => {
@@ -3857,12 +3853,13 @@ function ProfilePage() {
     })();
   }, [userId]);
 
-  // ---------- Helpers UI ----------
-  const Section = ({ title, action, children }) => (
+  // --------------------------------------------------
+  // UI helpers
+  const Section = ({ title, onAdd, children }) => (
     <div className="bg-white rounded-2xl shadow p-4">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xl font-semibold text-[#057e7f]">{title}</h2>
-        <button onClick={action} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+        <button onClick={onAdd} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
           + Add
         </button>
       </div>
@@ -3870,94 +3867,88 @@ function ProfilePage() {
     </div>
   );
 
-  const IconButton = ({ title, onClick, children, className = "" }) => (
-    <button
-      title={title}
-      onClick={onClick}
-      className={`p-2 rounded-md hover:bg-slate-100 text-slate-600 ${className}`}
-    >
-      {children}
-    </button>
-  );
+  const IconButton = ({ title, onClick, variant = "default" }) => {
+    const base = "inline-flex items-center justify-center rounded-full border text-sm p-2 transition";
+    const variants = {
+      default: "border-slate-200 text-slate-600 hover:bg-slate-50",
+      danger: "border-red-200 text-red-600 hover:bg-red-50",
+    };
+    return (
+      <button title={title} onClick={onClick} className={`${base} ${variants[variant]}`}>
+        {/* children = svg */}
+        {arguments[0]?.children}
+      </button>
+    );
+  };
 
   const FieldDisplay = ({ label, value }) => (
     <div>
       <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="text-[15px]">{value || <span className="text-slate-400">—</span>}</div>
+      <div className="text-[15px] whitespace-pre-wrap">{value || <span className="text-slate-400">—</span>}</div>
     </div>
   );
 
-  // ========== MISSIONS ==========
-  const startAddMission = () => {
-    const id = tmpId("new_m");
-    setDraftMissions((d) => ({
-      ...d,
-      [id]: {
-        id,
-        mission: "",
-        client_name: "",
-        period_start: "",
-        period_end: "",
-        description: "",
-        goals: "",
-        activities: "",
-        key_deliverables: "",
-        __isNew: true,
-      },
-    }));
-  };
+  // --------------------------------------------------
+  // MISSIONS
+  const startAddMission = () =>
+    setMissionDraft({
+      __isNew: true,
+      mission: "",
+      client_name: "",
+      period_start: "",
+      period_end: "",
+      description: "",
+      goals: "",
+      activities: "",
+      key_deliverables: "",
+    });
 
-  const startEditMission = (row) => {
-    setDraftMissions((d) => ({
-      ...d,
-      [row.id]: {
-        id: row.id,
-        mission: row.mission || "",
-        client_name: row.client_name || "",
-        period_start: row.period_start || "",
-        period_end: row.period_end || "",
-        description: row.description || "",
-        goals: row.goals || "",
-        activities: row.activities || "",
-        key_deliverables: row.key_deliverables || "",
-        __isNew: false,
-      },
-    }));
-  };
+  const startEditMission = (row) =>
+    setMissionDraft({
+      __isNew: false,
+      id: row.id,
+      mission: row.mission || "",
+      client_name: row.client_name || "",
+      period_start: row.period_start || "",
+      period_end: row.period_end || "",
+      description: row.description || "",
+      goals: row.goals || "",
+      activities: row.activities || "",
+      key_deliverables: row.key_deliverables || "",
+    });
 
-  const changeDraftMission = (id, field, value) => {
-    setDraftMissions((d) => ({ ...d, [id]: { ...d[id], [field]: value } }));
-  };
+  const changeMission = (field, value) =>
+    setMissionDraft((d) => ({ ...d, [field]: value }));
 
-  const saveDraftMission = async (id) => {
-    if (!userId) return;
-    const draft = draftMissions[id];
+  const saveMission = async () => {
+    if (!userId || !missionDraft) return;
     const payload = {
-      mission: draft.mission || null,
-      client_name: draft.client_name || null,
-      period_start: draft.period_start || null,
-      period_end: draft.period_end || null,
-      description: draft.description || null,
-      goals: draft.goals || null,
-      activities: draft.activities || null,
-      key_deliverables: draft.key_deliverables || null,
+      mission: missionDraft.mission || null,
+      client_name: missionDraft.client_name || null,
+      period_start: missionDraft.period_start || null,
+      period_end: missionDraft.period_end || null,
+      description: missionDraft.description || null,
+      goals: missionDraft.goals || null,
+      activities: missionDraft.activities || null,
+      key_deliverables: missionDraft.key_deliverables || null,
       user_id: userId,
     };
-
-    if (draft.__isNew) {
+    if (missionDraft.__isNew) {
       const { data, error } = await supabase.from("missions").insert([payload]).select("*").single();
       if (error) return alert("Save failed: " + error.message);
       setMissions((arr) => [data, ...arr]);
     } else {
-      const { data, error } = await supabase.from("missions").update(payload).eq("id", id).eq("user_id", userId).select("*").single();
+      const { data, error } = await supabase
+        .from("missions")
+        .update(payload)
+        .eq("id", missionDraft.id)
+        .eq("user_id", userId)
+        .select("*")
+        .single();
       if (error) return alert("Update failed: " + error.message);
-      setMissions((arr) => arr.map((r) => (r.id === id ? data : r)));
+      setMissions((arr) => arr.map((r) => (r.id === missionDraft.id ? data : r)));
     }
-    setDraftMissions((d) => {
-      const copy = { ...d };
-      delete copy[id];
-      return copy;
-    });
+    setMissionDraft(null);
   };
 
   const deleteMission = async (row) => {
@@ -3968,16 +3959,16 @@ function ProfilePage() {
     setMissions((arr) => arr.filter((r) => r.id !== row.id));
   };
 
-  const renderMissionEditor = (draft) => (
-    <div key={draft.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+  const MissionEditor = () => (
+    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Mission</span>
           <input
             type="text"
             className="border rounded-md p-2"
-            value={draft.mission}
-            onChange={(e) => changeDraftMission(draft.id, "mission", e.target.value)}
+            value={missionDraft.mission}
+            onChange={(e) => changeMission("mission", e.target.value)}
             placeholder="Ex: Data platform migration"
           />
         </label>
@@ -3986,8 +3977,8 @@ function ProfilePage() {
           <input
             type="text"
             className="border rounded-md p-2"
-            value={draft.client_name}
-            onChange={(e) => changeDraftMission(draft.id, "client_name", e.target.value)}
+            value={missionDraft.client_name}
+            onChange={(e) => changeMission("client_name", e.target.value)}
             placeholder="Ex: Acme Corp"
           />
         </label>
@@ -3999,8 +3990,8 @@ function ProfilePage() {
           <input
             type="date"
             className="border rounded-md p-2"
-            value={draft.period_start}
-            onChange={(e) => changeDraftMission(draft.id, "period_start", e.target.value)}
+            value={missionDraft.period_start || ""}
+            onChange={(e) => changeMission("period_start", e.target.value)}
           />
         </label>
         <label className="grid gap-1">
@@ -4008,8 +3999,8 @@ function ProfilePage() {
           <input
             type="date"
             className="border rounded-md p-2"
-            value={draft.period_end}
-            onChange={(e) => changeDraftMission(draft.id, "period_end", e.target.value)}
+            value={missionDraft.period_end || ""}
+            onChange={(e) => changeMission("period_end", e.target.value)}
           />
         </label>
       </div>
@@ -4019,8 +4010,8 @@ function ProfilePage() {
         <textarea
           rows={3}
           className="border rounded-md p-2"
-          value={draft.description}
-          onChange={(e) => changeDraftMission(draft.id, "description", e.target.value)}
+          value={missionDraft.description}
+          onChange={(e) => changeMission("description", e.target.value)}
         />
       </label>
 
@@ -4029,8 +4020,8 @@ function ProfilePage() {
         <textarea
           rows={3}
           className="border rounded-md p-2"
-          value={draft.goals}
-          onChange={(e) => changeDraftMission(draft.id, "goals", e.target.value)}
+          value={missionDraft.goals}
+          onChange={(e) => changeMission("goals", e.target.value)}
         />
       </label>
 
@@ -4039,8 +4030,8 @@ function ProfilePage() {
         <textarea
           rows={3}
           className="border rounded-md p-2"
-          value={draft.activities}
-          onChange={(e) => changeDraftMission(draft.id, "activities", e.target.value)}
+          value={missionDraft.activities}
+          onChange={(e) => changeMission("activities", e.target.value)}
         />
       </label>
 
@@ -4049,48 +4040,42 @@ function ProfilePage() {
         <textarea
           rows={3}
           className="border rounded-md p-2"
-          value={draft.key_deliverables}
-          onChange={(e) => changeDraftMission(draft.id, "key_deliverables", e.target.value)}
+          value={missionDraft.key_deliverables}
+          onChange={(e) => changeMission("key_deliverables", e.target.value)}
         />
       </label>
 
       <div className="flex justify-end">
-        <button onClick={() => saveDraftMission(draft.id)} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+        <button onClick={saveMission} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
           Save
         </button>
       </div>
     </div>
   );
 
-  const renderMissionView = (row) => (
-    <div key={row.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+  const MissionCard = ({ row }) => (
+    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
       <div className="flex items-start justify-between">
         <div className="font-medium">{row.mission || "Untitled mission"}</div>
-        <div className="flex items-center gap-1">
-          {/* Pencil */}
+        <div className="flex items-center gap-2">
           <IconButton title="Edit" onClick={() => startEditMission(row)}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 4h2m2 0h2m-6 16h6M4 20h4m10-8l2-2a2.828 2.828 0 10-4-4l-2 2M12 12l6-6" />
+            {/* pencil-square */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M17.414 2.586a2 2 0 010 2.828l-8.95 8.95a2 2 0 01-.878.51l-3.178.794a1 1 0 01-1.213-1.213l.794-3.178a2 2 0 01.51-.878l8.95-8.95a2 2 0 012.828 0z" />
+              <path d="M15 7l-2-2" />
             </svg>
           </IconButton>
-          {/* X */}
-          <IconButton title="Delete" onClick={() => deleteMission(row)} className="text-red-600 hover:bg-red-50">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          <IconButton title="Delete" variant="danger" onClick={() => deleteMission(row)}>
+            {/* x-mark */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 011.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </IconButton>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <FieldDisplay label="Client's name" value={row.client_name} />
-        <FieldDisplay
-          label="Period"
-          value={
-            row.period_start || row.period_end
-              ? `${row.period_start || "?"} → ${row.period_end || "?"}`
-              : ""
-          }
-        />
+        <FieldDisplay label="Period" value={(row.period_start || row.period_end) ? `${row.period_start || "?"} → ${row.period_end || "?"}` : ""} />
       </div>
       <FieldDisplay label="Description" value={row.description} />
       <FieldDisplay label="Goals" value={row.goals} />
@@ -4099,36 +4084,38 @@ function ProfilePage() {
     </div>
   );
 
-  // ========== TRAININGS ==========
-  const startAddTraining = () => {
-    const id = tmpId("new_t");
-    setDraftTrainings((d) => ({ ...d, [id]: { id, name: "", date: "", __isNew: true } }));
-  };
-  const startEditTraining = (row) => {
-    setDraftTrainings((d) => ({ ...d, [row.id]: { id: row.id, name: row.name || "", date: row.date || "", __isNew: false } }));
-  };
-  const changeDraftTraining = (id, field, value) => {
-    setDraftTrainings((d) => ({ ...d, [id]: { ...d[id], [field]: value } }));
-  };
-  const saveDraftTraining = async (id) => {
-    if (!userId) return;
-    const draft = draftTrainings[id];
-    const payload = { name: draft.name || null, date: draft.date || null, user_id: userId };
-    if (draft.__isNew) {
+  // --------------------------------------------------
+  // TRAININGS
+  const startAddTraining = () =>
+    setTrainingDraft({ __isNew: true, name: "", date: "" });
+
+  const startEditTraining = (row) =>
+    setTrainingDraft({ __isNew: false, id: row.id, name: row.name || "", date: row.date || "" });
+
+  const changeTraining = (field, value) =>
+    setTrainingDraft((d) => ({ ...d, [field]: value }));
+
+  const saveTraining = async () => {
+    if (!userId || !trainingDraft) return;
+    const payload = { name: trainingDraft.name || null, date: trainingDraft.date || null, user_id: userId };
+    if (trainingDraft.__isNew) {
       const { data, error } = await supabase.from("trainings").insert([payload]).select("*").single();
       if (error) return alert("Save failed: " + error.message);
       setTrainings((arr) => [data, ...arr]);
     } else {
-      const { data, error } = await supabase.from("trainings").update(payload).eq("id", id).eq("user_id", userId).select("*").single();
+      const { data, error } = await supabase
+        .from("trainings")
+        .update(payload)
+        .eq("id", trainingDraft.id)
+        .eq("user_id", userId)
+        .select("*")
+        .single();
       if (error) return alert("Update failed: " + error.message);
-      setTrainings((arr) => arr.map((r) => (r.id === id ? data : r)));
+      setTrainings((arr) => arr.map((r) => (r.id === trainingDraft.id ? data : r)));
     }
-    setDraftTrainings((d) => {
-      const copy = { ...d };
-      delete copy[id];
-      return copy;
-    });
+    setTrainingDraft(null);
   };
+
   const deleteTraining = async (row) => {
     const ok = confirm("Delete this training?");
     if (!ok) return;
@@ -4136,16 +4123,17 @@ function ProfilePage() {
     if (error) return alert("Delete failed: " + error.message);
     setTrainings((arr) => arr.filter((r) => r.id !== row.id));
   };
-  const renderTrainingEditor = (draft) => (
-    <div key={draft.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+
+  const TrainingEditor = () => (
+    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Training's name</span>
           <input
             type="text"
             className="border rounded-md p-2"
-            value={draft.name}
-            onChange={(e) => changeDraftTraining(draft.id, "name", e.target.value)}
+            value={trainingDraft.name}
+            onChange={(e) => changeTraining("name", e.target.value)}
             placeholder="Ex: Advanced React"
           />
         </label>
@@ -4154,31 +4142,35 @@ function ProfilePage() {
           <input
             type="date"
             className="border rounded-md p-2"
-            value={draft.date}
-            onChange={(e) => changeDraftTraining(draft.id, "date", e.target.value)}
+            value={trainingDraft.date || ""}
+            onChange={(e) => changeTraining("date", e.target.value)}
           />
         </label>
       </div>
       <div className="flex justify-end">
-        <button onClick={() => saveDraftTraining(draft.id)} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+        <button onClick={saveTraining} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
           Save
         </button>
       </div>
     </div>
   );
-  const renderTrainingView = (row) => (
-    <div key={row.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+
+  const TrainingCard = ({ row }) => (
+    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
       <div className="flex items-start justify-between">
         <div className="font-medium">{row.name || "Untitled training"}</div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <IconButton title="Edit" onClick={() => startEditTraining(row)}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 4h2m2 0h2m-6 16h6M4 20h4m10-8l2-2a2.828 2.828 0 10-4-4l-2 2M12 12l6-6" />
+            {/* pencil-square */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M17.414 2.586a2 2 0 010 2.828l-8.95 8.95a2 2 0 01-.878.51l-3.178.794a1 1 0 01-1.213-1.213l.794-3.178a2 2 0 01.51-.878l8.95-8.95a2 2 0 012.828 0z" />
+              <path d="M15 7l-2-2" />
             </svg>
           </IconButton>
-          <IconButton title="Delete" onClick={() => deleteTraining(row)} className="text-red-600 hover:bg-red-50">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          <IconButton title="Delete" variant="danger" onClick={() => deleteTraining(row)}>
+            {/* x-mark */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 011.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </IconButton>
         </div>
@@ -4187,36 +4179,38 @@ function ProfilePage() {
     </div>
   );
 
-  // ========== TEALS CONTRIBUTIONS ==========
-  const startAddInternal = () => {
-    const id = tmpId("new_i");
-    setDraftInternals((d) => ({ ...d, [id]: { id, name: "", date: "", __isNew: true } }));
-  };
-  const startEditInternal = (row) => {
-    setDraftInternals((d) => ({ ...d, [row.id]: { id: row.id, name: row.name || "", date: row.date || "", __isNew: false } }));
-  };
-  const changeDraftInternal = (id, field, value) => {
-    setDraftInternals((d) => ({ ...d, [id]: { ...d[id], [field]: value } }));
-  };
-  const saveDraftInternal = async (id) => {
-    if (!userId) return;
-    const draft = draftInternals[id];
-    const payload = { name: draft.name || null, date: draft.date || null, user_id: userId };
-    if (draft.__isNew) {
+  // --------------------------------------------------
+  // TEALS CONTRIBUTIONS
+  const startAddInternal = () =>
+    setInternalDraft({ __isNew: true, name: "", date: "" });
+
+  const startEditInternal = (row) =>
+    setInternalDraft({ __isNew: false, id: row.id, name: row.name || "", date: row.date || "" });
+
+  const changeInternal = (field, value) =>
+    setInternalDraft((d) => ({ ...d, [field]: value }));
+
+  const saveInternal = async () => {
+    if (!userId || !internalDraft) return;
+    const payload = { name: internalDraft.name || null, date: internalDraft.date || null, user_id: userId };
+    if (internalDraft.__isNew) {
       const { data, error } = await supabase.from("internal_contributions").insert([payload]).select("*").single();
       if (error) return alert("Save failed: " + error.message);
       setInternals((arr) => [data, ...arr]);
     } else {
-      const { data, error } = await supabase.from("internal_contributions").update(payload).eq("id", id).eq("user_id", userId).select("*").single();
+      const { data, error } = await supabase
+        .from("internal_contributions")
+        .update(payload)
+        .eq("id", internalDraft.id)
+        .eq("user_id", userId)
+        .select("*")
+        .single();
       if (error) return alert("Update failed: " + error.message);
-      setInternals((arr) => arr.map((r) => (r.id === id ? data : r)));
+      setInternals((arr) => arr.map((r) => (r.id === internalDraft.id ? data : r)));
     }
-    setDraftInternals((d) => {
-      const copy = { ...d };
-      delete copy[id];
-      return copy;
-    });
+    setInternalDraft(null);
   };
+
   const deleteInternal = async (row) => {
     const ok = confirm("Delete this contribution?");
     if (!ok) return;
@@ -4224,16 +4218,17 @@ function ProfilePage() {
     if (error) return alert("Delete failed: " + error.message);
     setInternals((arr) => arr.filter((r) => r.id !== row.id));
   };
-  const renderInternalEditor = (draft) => (
-    <div key={draft.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+
+  const InternalEditor = () => (
+    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <label className="grid gap-1">
           <span className="text-sm text-slate-600">Contribution's name</span>
           <input
             type="text"
             className="border rounded-md p-2"
-            value={draft.name}
-            onChange={(e) => changeDraftInternal(draft.id, "name", e.target.value)}
+            value={internalDraft.name}
+            onChange={(e) => changeInternal("name", e.target.value)}
             placeholder="Ex: Hiring sprint, OSS contribution..."
           />
         </label>
@@ -4242,31 +4237,35 @@ function ProfilePage() {
           <input
             type="date"
             className="border rounded-md p-2"
-            value={draft.date}
-            onChange={(e) => changeDraftInternal(draft.id, "date", e.target.value)}
+            value={internalDraft.date || ""}
+            onChange={(e) => changeInternal("date", e.target.value)}
           />
         </label>
       </div>
       <div className="flex justify-end">
-        <button onClick={() => saveDraftInternal(draft.id)} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+        <button onClick={saveInternal} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
           Save
         </button>
       </div>
     </div>
   );
-  const renderInternalView = (row) => (
-    <div key={row.id} className="border border-slate-200 rounded-xl p-3 grid gap-3">
+
+  const InternalCard = ({ row }) => (
+    <div className="border border-slate-200 rounded-xl p-3 grid gap-3">
       <div className="flex items-start justify-between">
         <div className="font-medium">{row.name || "Untitled contribution"}</div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <IconButton title="Edit" onClick={() => startEditInternal(row)}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 4h2m2 0h2m-6 16h6M4 20h4m10-8l2-2a2.828 2.828 0 10-4-4l-2 2M12 12l6-6" />
+            {/* pencil-square */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M17.414 2.586a2 2 0 010 2.828l-8.95 8.95a2 2 0 01-.878.51l-3.178.794a1 1 0 01-1.213-1.213l.794-3.178a2 2 0 01.51-.878l8.95-8.95a2 2 0 012.828 0z" />
+              <path d="M15 7l-2-2" />
             </svg>
           </IconButton>
-          <IconButton title="Delete" onClick={() => deleteInternal(row)} className="text-red-600 hover:bg-red-50">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          <IconButton title="Delete" variant="danger" onClick={() => deleteInternal(row)}>
+            {/* x-mark */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 011.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </IconButton>
         </div>
@@ -4275,20 +4274,14 @@ function ProfilePage() {
     </div>
   );
 
-  // ---------- Rendu ----------
-  // On veut afficher d’abord les brouillons (nouveaux) puis les entrées existantes.
-  const draftMissionList = Object.values(draftMissions).filter((d) => d.__isNew);
-  const editingMissionExisting = Object.values(draftMissions).filter((d) => !d.__isNew);
-  const draftTrainingList = Object.values(draftTrainings).filter((d) => d.__isNew);
-  const editingTrainingExisting = Object.values(draftTrainings).filter((d) => !d.__isNew);
-  const draftInternalList = Object.values(draftInternals).filter((d) => d.__isNew);
-  const editingInternalExisting = Object.values(draftInternals).filter((d) => !d.__isNew);
-
+  // --------------------------------------------------
   return (
     <section className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[#057e7f]">Profile</h1>
-        <div className="text-slate-600 text-sm">Signed in as <span className="font-medium">{email}</span></div>
+        <div className="text-slate-600 text-sm">
+          Signed in as <span className="font-medium">{email}</span>
+        </div>
       </div>
 
       {loading ? (
@@ -4296,46 +4289,43 @@ function ProfilePage() {
       ) : (
         <>
           {/* MISSIONS */}
-          <Section title="Missions" action={startAddMission}>
-            {draftMissionList.map((d) => renderMissionEditor(d))}
-            {missions.length === 0 && editingMissionExisting.length === 0 && draftMissionList.length === 0 && (
+          <Section title="Missions" onAdd={startAddMission}>
+            {missionDraft && <MissionEditor />}
+            {missions.length === 0 && !missionDraft && (
               <div className="text-sm text-slate-500">No missions yet.</div>
             )}
-            {/* Entrées existantes */}
-            {missions.map((row) => {
-              const editing = draftMissions[row.id];
-              return editing ? renderMissionEditor(editing) : renderMissionView(row);
-            })}
+            {missions.map((row) => (
+              <MissionCard key={row.id} row={row} />
+            ))}
           </Section>
 
           {/* TRAININGS */}
-          <Section title="Trainings" action={startAddTraining}>
-            {draftTrainingList.map((d) => renderTrainingEditor(d))}
-            {trainings.length === 0 && editingTrainingExisting.length === 0 && draftTrainingList.length === 0 && (
+          <Section title="Trainings" onAdd={startAddTraining}>
+            {trainingDraft && <TrainingEditor />}
+            {trainings.length === 0 && !trainingDraft && (
               <div className="text-sm text-slate-500">No trainings yet.</div>
             )}
-            {trainings.map((row) => {
-              const editing = draftTrainings[row.id];
-              return editing ? renderTrainingEditor(editing) : renderTrainingView(row);
-            })}
+            {trainings.map((row) => (
+              <TrainingCard key={row.id} row={row} />
+            ))}
           </Section>
 
           {/* TEALS CONTRIBUTIONS */}
-          <Section title="Teals contributions" action={startAddInternal}>
-            {draftInternalList.map((d) => renderInternalEditor(d))}
-            {internals.length === 0 && editingInternalExisting.length === 0 && draftInternalList.length === 0 && (
+          <Section title="Teals contributions" onAdd={startAddInternal}>
+            {internalDraft && <InternalEditor />}
+            {internals.length === 0 && !internalDraft && (
               <div className="text-sm text-slate-500">No contributions yet.</div>
             )}
-            {internals.map((row) => {
-              const editing = draftInternals[row.id];
-              return editing ? renderInternalEditor(editing) : renderInternalView(row);
-            })}
+            {internals.map((row) => (
+              <InternalCard key={row.id} row={row} />
+            ))}
           </Section>
         </>
       )}
     </section>
   );
 }
+
 
 
 
