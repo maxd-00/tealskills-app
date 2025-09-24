@@ -3862,23 +3862,23 @@ function ProfilePage() {
 
   // ------- UI helpers (mobile-first) -------
 // Section container: full width + mobile-first header
+// Section: même gabarit que les autres pages (titre à gauche, bouton compact à droite)
 const Section = ({ title, onAdd, children }) => (
-  <div className="w-full bg-white rounded-2xl shadow-sm sm:shadow p-3 sm:p-4">
-    {/* On mobile: stack title and button; on ≥sm: row with space-between */}
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+  <div className="w-full bg-white rounded-2xl shadow p-4">
+    <div className="flex items-center justify-between gap-3 mb-3">
       <h2 className="text-xl font-semibold text-[#057e7f]">{title}</h2>
       <button
         type="button"
         onClick={onAdd}
-        className="w-full sm:w-auto px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm"
+        className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm"
       >
         + Add
       </button>
     </div>
-
-    <div className="grid gap-3 sm:gap-4">{children}</div>
+    <div className="grid gap-4">{children}</div>
   </div>
 );
+
 
 
   // Icônes style Admin (✎ / ✕), cibles tactiles 44px
@@ -4163,7 +4163,8 @@ const Section = ({ title, onAdd, children }) => (
 
   // ------- Render (conteneur mobile-friendly) -------
   return (
-    <section className="w-full max-w-none px-4 sm:px-6 md:px-8 space-y-4 sm:space-y-6">
+    <section className="mx-auto w-full max-w-screen-md md:max-w-screen-lg lg:max-w-[1100px] px-4 sm:px-6 md:px-8 space-y-6">
+
       <div className="pt-[env(safe-area-inset-top)]">
         <h1 className="text-xl sm:text-2xl font-bold text-[#057e7f]">Profile</h1>
         <div className="text-slate-600 text-sm mt-1">
