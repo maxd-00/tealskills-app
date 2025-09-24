@@ -354,16 +354,16 @@ useEffect(() => {
         <div className="px-5 py-4 border-b">
           <h3 className="text-lg font-semibold text-[#057e7f]">Export</h3>
           <p className="text-sm text-slate-600">
-            Ajoute un commentaire général avant l’export.
+            Add a general comment before exporting.
           </p>
         </div>
         <div className="px-5 py-4 grid gap-3">
           <label className="grid gap-1">
-            <span className="text-sm text-slate-600">Commentaire général</span>
+            <span className="text-sm text-slate-600">General comment</span>
             <textarea
               rows={5}
               className="w-full rounded-md border border-slate-300 p-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#057e7f]"
-              placeholder="Notes, contexte, hypothèses…"
+              placeholder="Add your comment..."
               value={exportComment}
               onChange={(e) => setExportComment(e.target.value)}
             />
@@ -376,12 +376,13 @@ useEffect(() => {
           >
             Cancel
           </button>
-          <button
-            onClick={() => { alert('Export pas encore implémenté'); setExportOpen(false); }}
-            className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90"
-          >
-            Export
-          </button>
+<button
+  onClick={() => { alert('Export not implemented yet'); setExportOpen(false); }}
+  className="px-4 py-2 rounded-full bg-[#057e7f] text-white hover:opacity-90"
+>
+  Export
+</button>
+
         </div>
       </div>
     </div>
