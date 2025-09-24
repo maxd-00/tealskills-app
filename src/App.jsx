@@ -3822,18 +3822,18 @@ function ProfilePage() {
   const userId = session?.user?.id;
   const email = session?.user?.email || "";
 
+  // Chargement & données
   const [loading, setLoading] = useState(true);
   const [missions, setMissions] = useState([]);
   const [trainings, setTrainings] = useState([]);
-  const [internals, setInternals] = useState([]);
+  const [internals, setInternals] = useState([]); // Teals contributions
 
-  // Éditeurs uniques (un brouillon par section)
-  const [missionDraft, setMissionDraft] = useState(null);   // { __isNew, id?, fields... } | null
-  const [trainingDraft, setTrainingDraft] = useState(null);
-  const [internalDraft, setInternalDraft] = useState(null);
+  // Un SEUL éditeur par section (corrige le focus qui saute)
+  const [missionDraft, setMissionDraft] = useState(null);   // {__isNew, id?, mission, client_name, period_start, period_end, description, goals, activities, key_deliverables}
+  const [trainingDraft, setTrainingDraft] = useState(null); // {__isNew, id?, name, date}
+  const [internalDraft, setInternalDraft] = useState(null); // {__isNew, id?, name, date}
 
-  // --------------------------------------------------
-  // Load
+  // ------- Load initial -------
   useEffect(() => {
     if (!userId) return;
     (async () => {
@@ -3853,13 +3853,12 @@ function ProfilePage() {
     })();
   }, [userId]);
 
-  // --------------------------------------------------
-  // UI helpers
+  // ------- Helpers UI -------
   const Section = ({ title, onAdd, children }) => (
     <div className="bg-white rounded-2xl shadow p-4">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xl font-semibold text-[#057e7f]">{title}</h2>
-        <button onClick={onAdd} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+        <button onClick={onAdd} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm" type="button">
           + Add
         </button>
       </div>
@@ -3867,16 +3866,13 @@ function ProfilePage() {
     </div>
   );
 
-  const IconButton = ({ title, onClick, variant = "default" }) => {
-    const base = "inline-flex items-center justify-center rounded-full border text-sm p-2 transition";
-    const variants = {
-      default: "border-slate-200 text-slate-600 hover:bg-slate-50",
-      danger: "border-red-200 text-red-600 hover:bg-red-50",
-    };
+  // Icônes style Admin (mêmes couleurs/format : ✎ / ✕)
+  const AdminIconButton = ({ type = "edit", title, onClick }) => {
+    const base = "bg-white rounded-full hover:bg-slate-50 px-2";
+    const color = type === "edit" ? "text-blue-600" : "text-red-600";
     return (
-      <button title={title} onClick={onClick} className={`${base} ${variants[variant]}`}>
-        {/* children = svg */}
-        {arguments[0]?.children}
+      <button type="button" title={title} onClick={onClick} className={`${base} ${color}`}>
+        {type === "edit" ? "✎" : "✕"}
       </button>
     );
   };
@@ -3888,8 +3884,7 @@ function ProfilePage() {
     </div>
   );
 
-  // --------------------------------------------------
-  // MISSIONS
+  // ===================== MISSIONS =====================
   const startAddMission = () =>
     setMissionDraft({
       __isNew: true,
@@ -4045,8 +4040,18 @@ function ProfilePage() {
         />
       </label>
 
-      <div className="flex justify-end">
-        <button onClick={saveMission} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setMissionDraft(null)}
+          className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-sm"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={saveMission}
+          className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm"
+        >
           Save
         </button>
       </div>
@@ -4058,19 +4063,8 @@ function ProfilePage() {
       <div className="flex items-start justify-between">
         <div className="font-medium">{row.mission || "Untitled mission"}</div>
         <div className="flex items-center gap-2">
-          <IconButton title="Edit" onClick={() => startEditMission(row)}>
-            {/* pencil-square */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M17.414 2.586a2 2 0 010 2.828l-8.95 8.95a2 2 0 01-.878.51l-3.178.794a1 1 0 01-1.213-1.213l.794-3.178a2 2 0 01.51-.878l8.95-8.95a2 2 0 012.828 0z" />
-              <path d="M15 7l-2-2" />
-            </svg>
-          </IconButton>
-          <IconButton title="Delete" variant="danger" onClick={() => deleteMission(row)}>
-            {/* x-mark */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 011.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </IconButton>
+          <AdminIconButton title="Edit" onClick={() => startEditMission(row)} />
+          <AdminIconButton type="delete" title="Delete" onClick={() => deleteMission(row)} />
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -4084,10 +4078,8 @@ function ProfilePage() {
     </div>
   );
 
-  // --------------------------------------------------
-  // TRAININGS
-  const startAddTraining = () =>
-    setTrainingDraft({ __isNew: true, name: "", date: "" });
+  // ===================== TRAININGS =====================
+  const startAddTraining = () => setTrainingDraft({ __isNew: true, name: "", date: "" });
 
   const startEditTraining = (row) =>
     setTrainingDraft({ __isNew: false, id: row.id, name: row.name || "", date: row.date || "" });
@@ -4147,8 +4139,18 @@ function ProfilePage() {
           />
         </label>
       </div>
-      <div className="flex justify-end">
-        <button onClick={saveTraining} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setTrainingDraft(null)}
+          className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-sm"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={saveTraining}
+          className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm"
+        >
           Save
         </button>
       </div>
@@ -4160,29 +4162,16 @@ function ProfilePage() {
       <div className="flex items-start justify-between">
         <div className="font-medium">{row.name || "Untitled training"}</div>
         <div className="flex items-center gap-2">
-          <IconButton title="Edit" onClick={() => startEditTraining(row)}>
-            {/* pencil-square */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M17.414 2.586a2 2 0 010 2.828l-8.95 8.95a2 2 0 01-.878.51l-3.178.794a1 1 0 01-1.213-1.213l.794-3.178a2 2 0 01.51-.878l8.95-8.95a2 2 0 012.828 0z" />
-              <path d="M15 7l-2-2" />
-            </svg>
-          </IconButton>
-          <IconButton title="Delete" variant="danger" onClick={() => deleteTraining(row)}>
-            {/* x-mark */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 011.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </IconButton>
+          <AdminIconButton title="Edit" onClick={() => startEditTraining(row)} />
+          <AdminIconButton type="delete" title="Delete" onClick={() => deleteTraining(row)} />
         </div>
       </div>
       <FieldDisplay label="Date" value={row.date} />
     </div>
   );
 
-  // --------------------------------------------------
-  // TEALS CONTRIBUTIONS
-  const startAddInternal = () =>
-    setInternalDraft({ __isNew: true, name: "", date: "" });
+  // ===================== TEALS CONTRIBUTIONS =====================
+  const startAddInternal = () => setInternalDraft({ __isNew: true, name: "", date: "" });
 
   const startEditInternal = (row) =>
     setInternalDraft({ __isNew: false, id: row.id, name: row.name || "", date: row.date || "" });
@@ -4242,8 +4231,18 @@ function ProfilePage() {
           />
         </label>
       </div>
-      <div className="flex justify-end">
-        <button onClick={saveInternal} className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm">
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setInternalDraft(null)}
+          className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-sm"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={saveInternal}
+          className="px-3 py-1.5 rounded-full bg-[#057e7f] text-white hover:opacity-90 text-sm"
+        >
           Save
         </button>
       </div>
@@ -4255,26 +4254,15 @@ function ProfilePage() {
       <div className="flex items-start justify-between">
         <div className="font-medium">{row.name || "Untitled contribution"}</div>
         <div className="flex items-center gap-2">
-          <IconButton title="Edit" onClick={() => startEditInternal(row)}>
-            {/* pencil-square */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M17.414 2.586a2 2 0 010 2.828l-8.95 8.95a2 2 0 01-.878.51l-3.178.794a1 1 0 01-1.213-1.213l.794-3.178a2 2 0 01.51-.878l8.95-8.95a2 2 0 012.828 0z" />
-              <path d="M15 7l-2-2" />
-            </svg>
-          </IconButton>
-          <IconButton title="Delete" variant="danger" onClick={() => deleteInternal(row)}>
-            {/* x-mark */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 011.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </IconButton>
+          <AdminIconButton title="Edit" onClick={() => startEditInternal(row)} />
+          <AdminIconButton type="delete" title="Delete" onClick={() => deleteInternal(row)} />
         </div>
       </div>
       <FieldDisplay label="Date" value={row.date} />
     </div>
   );
 
-  // --------------------------------------------------
+  // ------- Render -------
   return (
     <section className="space-y-6">
       <div>
@@ -4288,7 +4276,7 @@ function ProfilePage() {
         <div className="text-slate-500">Loading…</div>
       ) : (
         <>
-          {/* MISSIONS */}
+          {/* Missions */}
           <Section title="Missions" onAdd={startAddMission}>
             {missionDraft && <MissionEditor />}
             {missions.length === 0 && !missionDraft && (
@@ -4299,7 +4287,7 @@ function ProfilePage() {
             ))}
           </Section>
 
-          {/* TRAININGS */}
+          {/* Trainings */}
           <Section title="Trainings" onAdd={startAddTraining}>
             {trainingDraft && <TrainingEditor />}
             {trainings.length === 0 && !trainingDraft && (
@@ -4310,7 +4298,7 @@ function ProfilePage() {
             ))}
           </Section>
 
-          {/* TEALS CONTRIBUTIONS */}
+          {/* Teals contributions */}
           <Section title="Teals contributions" onAdd={startAddInternal}>
             {internalDraft && <InternalEditor />}
             {internals.length === 0 && !internalDraft && (
@@ -4325,6 +4313,7 @@ function ProfilePage() {
     </section>
   );
 }
+
 
 
 
